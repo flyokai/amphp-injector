@@ -12,9 +12,9 @@ interface Parameter
 
     public function getType(): ?Type;
 
-    public function hasAttribute(string $attribute): bool;
+    public function hasAttribute(string $attribute, $flags = 0): bool;
 
-    public function getAttribute(string $attribute): ?object;
+    public function getAttribute(string $attribute, $flags = 0): ?object;
 
     public function getDefaultValue(): mixed;
 

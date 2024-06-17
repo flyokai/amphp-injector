@@ -27,9 +27,9 @@ final class ReflectionFunctionParameter implements Parameter
         return $this->reflection->isVariadic();
     }
 
-    public function hasAttribute(string $attribute): bool
+    public function hasAttribute(string $attribute, $flags = 0): bool
     {
-        return !empty($this->reflection->getAttributes($attribute));
+        return !empty($this->reflection->getAttributes($attribute, $flags));
     }
 
     public function getDefaultValue(): mixed
@@ -61,9 +61,9 @@ final class ReflectionFunctionParameter implements Parameter
         return $this->executable->getDeclaringClass();
     }
 
-    public function getAttribute(string $attribute): ?object
+    public function getAttribute(string $attribute, $flags = 0): ?object
     {
-        $attributes = $this->reflection->getAttributes($attribute);
+        $attributes = $this->reflection->getAttributes($attribute, $flags);
         if (isset($attributes[0])) {
             return $attributes[0]->newInstance();
         }
