@@ -49,7 +49,6 @@
     },
     "require": {
         "php": ">=8.0",
-        "kelunik/fiber-local": "^1-dev",
         "psr/container": "^1.1 | ^2"
     },
     "require-dev": {
