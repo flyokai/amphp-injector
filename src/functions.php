@@ -11,6 +11,7 @@ use Amp\Injector\Provider\ValueProvider;
 use Amp\Injector\Weaver\AnyWeaver;
 use Amp\Injector\Weaver\AutomaticTypeWeaver;
 use Amp\Injector\Weaver\NameWeaver;
+use Amp\Injector\Weaver\RuntimeTypeWeaver;
 use Amp\Injector\Weaver\TypeWeaver;
 
 function definitions(): Definitions
@@ -71,6 +72,11 @@ function value(mixed $value): Definition
 function automaticTypes(Definitions $definitions): AutomaticTypeWeaver
 {
     return new AutomaticTypeWeaver($definitions);
+}
+
+function runtimeTypes(): RuntimeTypeWeaver
+{
+    return new RuntimeTypeWeaver();
 }
 
 function names(array $definitions = []): NameWeaver
