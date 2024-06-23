@@ -2,6 +2,7 @@
 
 namespace Amp\Injector\Weaver;
 
+use Amp\Injector\Definitions;
 use Amp\Injector\Internal\Reflector;
 use Amp\Injector\Meta\Parameter;
 use Amp\Injector\Weaver;
@@ -11,22 +12,15 @@ use function Amp\Injector\Internal\getDefaultReflector;
 use Amp\Injector\Definition;
 use function Amp\Injector\Internal\normalizeClass;
 use Amp\Injector\Meta\ParameterAttribute;
-use Amp\Injector\Meta\ParameterAttribute\SharedParameter as SingletonParameter;
-use Amp\Injector\Meta\ParameterAttribute\PrivateParameter as ObjectParameter;
-use function Amp\Injector\object;
-use function Amp\Injector\singleton;
 
 class RuntimeTypeWeaver implements Weaver
 {
     private Reflector $reflector;
 
-    /** @var Definition[] */
-    private array $definitions = [];
-
-    public function __construct()
-    {
+    public function __construct(
+        public Definitions $runtimeDefinitions = new Definitions()
+    ) {
         $this->reflector = getDefaultReflector();
-
     }
 
     public function getDefinition(Parameter $parameter): ?Definition
@@ -35,8 +29,8 @@ class RuntimeTypeWeaver implements Weaver
             $class = $parameter->getDeclaringClass();
             $nClass = normalizeClass($class);
             $key = $nClass.'::'.$parameter->getName();
-            if (array_key_exists($key, $this->definitions)) {
-                return $this->definitions[$key];
+            if ($this->runtimeDefinitions->get($key)) {
+                return $this->runtimeDefinitions->get($key);
             }
             $injectorAttribute = null;
             if ($parameter->hasAttribute(
@@ -51,14 +45,20 @@ class RuntimeTypeWeaver implements Weaver
             if (!$injectorAttribute) {
                 return null;
             }
+            if ($injectorAttribute instanceof ParameterAttribute\FactoryParameter) {
+                $this->processFactoryParameter($injectorAttribute, $key);
+                return $this->runtimeDefinitions->get($key);
+            }
             foreach ($type->getTypes() as $type) {
                 $typeReflection = null;
                 try {
                     $typeReflection = new ReflectionClass($type);
                 } catch (\ReflectionException) {}
                 if ($typeReflection && $typeReflection->isInstantiable()) {
-                    $this->definitions[$key] = $this->definitionByAttribute($injectorAttribute, $type);
-                    return $this->definitions[$key];
+                    $this->processParameterAttribute($injectorAttribute, $type, $key);
+                    if ($this->runtimeDefinitions->get($key)) {
+                        return $this->runtimeDefinitions->get($key);
+                    }
                 }
             }
         }
@@ -66,11 +66,46 @@ class RuntimeTypeWeaver implements Weaver
         return null;
     }
 
-    protected function definitionByAttribute($parameterAttribute, $targetClass): ?Definition
+    protected function factoryClass($class)
     {
-        if ($parameterAttribute instanceof ParameterAttribute\Factory) {
-            return $parameterAttribute->createDefinition($targetClass);
+        return $class.'Factory';
+    }
+
+    protected function processFactoryParameter($parameterAttribute, $key): void
+    {
+        if (!$this->runtimeDefinitions->get($key)) {
+            if ($parameterAttribute instanceof ParameterAttribute\FactoryParameter) {
+                $targetClass = $this->factoryClass($parameterAttribute->class);
+                $definition = $this->runtimeDefinitions->get($targetClass);
+                if (!$definition) {
+                    $definition = $parameterAttribute->createDefinition($targetClass);
+                    $this->addDefinition($definition, $targetClass);
+                }
+                $this->addDefinition($definition, $key);
+            }
         }
-        return null;
+    }
+
+    protected function processParameterAttribute($parameterAttribute, $targetClass, $key): void
+    {
+        if (!$this->runtimeDefinitions->get($key)) {
+            if ($parameterAttribute instanceof ParameterAttribute\Service) {
+                $definition = $this->runtimeDefinitions->get($targetClass);
+                if (!$definition) {
+                    $definition = $parameterAttribute->createDefinition($targetClass);
+                    $this->addDefinition($definition, $targetClass);
+                }
+                $this->addDefinition($definition, $key);
+            } elseif ($parameterAttribute instanceof ParameterAttribute\Factory) {
+                $definition = $parameterAttribute->createDefinition($targetClass);
+                $this->addDefinition($definition, $key);
+            }
+        }
+    }
+
+    protected function addDefinition(Definition $definition, string $id): RuntimeTypeWeaver
+    {
+        $this->runtimeDefinitions = $this->runtimeDefinitions->with($definition, $id);
+        return $this;
     }
 }

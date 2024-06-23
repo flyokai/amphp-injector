@@ -8,7 +8,7 @@ use function Amp\Injector\object;
 use function Amp\Injector\singleton;
 
 #[Attribute(Attribute::TARGET_PARAMETER)]
-class SharedParameter implements Factory
+class ServiceParameter implements Service
 {
     public function createDefinition(string $class, ?Arguments $arguments = null)
     {

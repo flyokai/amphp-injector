@@ -2,6 +2,7 @@
 
 namespace Amp\Injector;
 
+use Amp\Injector\Definition\InjectableFactoryDefinition;
 use Amp\Injector\Definition\FactoryDefinition;
 use Amp\Injector\Definition\ProviderDefinition;
 use Amp\Injector\Definition\SingletonDefinition;
@@ -47,6 +48,15 @@ function singleton(Definition $definition): SingletonDefinition
     return new SingletonDefinition($definition);
 }
 
+function injectableFactory(\Closure $factory, string $class, ?Arguments $arguments = null): InjectableFactoryDefinition
+{
+    $executable = new ReflectionFunctionExecutable(new \ReflectionFunction($factory));
+    $ctorExecutable = new ReflectionConstructorExecutable($class);
+    $arguments ??= arguments();
+
+    return new InjectableFactoryDefinition($executable, $ctorExecutable->getParameters(), $arguments);
+}
+
 function factory(\Closure $factory, ?Arguments $arguments = null): FactoryDefinition
 {
     $executable = new ReflectionFunctionExecutable(new \ReflectionFunction($factory));
@@ -74,9 +84,9 @@ function automaticTypes(Definitions $definitions): AutomaticTypeWeaver
     return new AutomaticTypeWeaver($definitions);
 }
 
-function runtimeTypes(): RuntimeTypeWeaver
+function runtimeTypes(Definitions $definitions = new Definitions()): RuntimeTypeWeaver
 {
-    return new RuntimeTypeWeaver();
+    return new RuntimeTypeWeaver($definitions);
 }
 
 function names(array $definitions = []): NameWeaver

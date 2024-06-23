@@ -8,6 +8,7 @@ use Amp\Injector\Injector;
 use Amp\Injector\Meta\Argument;
 use Amp\Injector\Meta\Executable;
 use Amp\Injector\Provider;
+use Amp\Injector\Provider\InjectableFactoryProvider;
 use Amp\Injector\Provider\FactoryProvider;
 use function Amp\Injector\value;
 
@@ -19,7 +20,21 @@ final class ExecutableWeaver
      */
     public static function build(Executable $executable, Arguments $arguments, Injector $injector): Provider
     {
-        return new FactoryProvider($executable, ...self::buildArguments($executable, $arguments, $injector));
+        return new FactoryProvider(
+            $executable,
+            ...self::buildArguments($executable, $executable->getParameters(), $arguments, $injector)
+        );
+    }
+
+    /**
+     * @throws InjectionException
+     */
+    public static function buildCallback(Executable $executable, array $parameters, Arguments $arguments, Injector $injector): Provider
+    {
+        return new InjectableFactoryProvider(
+            $executable,
+            ...self::buildArguments($executable, $parameters, $arguments, $injector)
+        );
     }
 
     /**
@@ -30,9 +45,8 @@ final class ExecutableWeaver
      *
      * @throws InjectionException
      */
-    private static function buildArguments(Executable $executable, Arguments $arguments, Injector $injector): array
+    private static function buildArguments(Executable $executable, array $parameters, Arguments $arguments, Injector $injector): array
     {
-        $parameters = $executable->getParameters();
         $count = \count($parameters);
         $variadic = null;
         $args = [];

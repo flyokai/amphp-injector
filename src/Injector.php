@@ -22,4 +22,10 @@ final class Injector
         // TODO: Make customizable?
         return ExecutableWeaver::build($executable, $arguments->with($this->weaver), $this);
     }
+
+    public function getCallbackProvider(Executable $executable, array $parameters, Arguments $arguments): Provider
+    {
+        // TODO: Make customizable?
+        return ExecutableWeaver::buildCallback($executable, $parameters, $arguments->with($this->weaver), $this);
+    }
 }
