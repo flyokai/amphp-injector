@@ -5,6 +5,7 @@ namespace Amp\Injector;
 use Amp\Injector\Definition\InjectableFactoryDefinition;
 use Amp\Injector\Definition\FactoryDefinition;
 use Amp\Injector\Definition\ProviderDefinition;
+use Amp\Injector\Definition\ProxyDefinition;
 use Amp\Injector\Definition\SingletonDefinition;
 use Amp\Injector\Meta\Reflection\ReflectionConstructorExecutable;
 use Amp\Injector\Meta\Reflection\ReflectionFunctionExecutable;
@@ -71,6 +72,11 @@ function object(string $class, ?Arguments $arguments = null): FactoryDefinition
     $arguments ??= arguments();
 
     return new FactoryDefinition($executable, $arguments);
+}
+
+function proxy(string $class, Definition $definition): ProxyDefinition
+{
+    return new ProxyDefinition($class, $definition);
 }
 
 function value(mixed $value): Definition

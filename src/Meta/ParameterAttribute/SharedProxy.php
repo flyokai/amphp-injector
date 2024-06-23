@@ -6,12 +6,13 @@ use Attribute;
 use Amp\Injector\Arguments;
 use function Amp\Injector\object;
 use function Amp\Injector\singleton;
+use function Amp\Injector\proxy;
 
 #[Attribute(Attribute::TARGET_PARAMETER)]
-class ServiceParameter implements Factory, Service
+class SharedProxy extends PrivateProxy implements ProxyParameter
 {
     public function createDefinition(string $class, ?Arguments $arguments = null)
     {
-        return singleton(object($class, $arguments));
+        return singleton(proxy($class, object($this->class, $arguments)));
     }
 }

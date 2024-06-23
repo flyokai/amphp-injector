@@ -15,7 +15,7 @@ use function Amp\Injector\names;
 use function Amp\Injector\object;
 use function Amp\Injector\value;
 
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/bootstrap.php';
 
 interface Engine
 {
@@ -83,10 +83,10 @@ function proxy(string $class, Definition $definition): Definition
         {
             $factory = new LazyLoadingValueHolderFactory;
 
-            return factory(fn (ProviderContext $context) => $factory->createProxy(
+            return factory(fn () => $factory->createProxy(
                 $this->class,
-                function (&$object, $proxy, $method, $parameters, &$initializer) use ($injector, $context) {
-                    $object = $this->definition->build($injector)->get($context);
+                function (&$object, $proxy, $method, $parameters, &$initializer) use ($injector) {
+                    $object = $this->definition->build($injector)->get(new ProviderContext);
                     $initializer = null;
                 }
             ))->build($injector);
@@ -96,7 +96,7 @@ function proxy(string $class, Definition $definition): Definition
 
 $definitions = (new Definitions)
     ->with(proxy(Car::class, object(Car::class)), 'car')
-    ->with(proxy(V8::class, object(V8::class, arguments(names(['arg', value('some text')])))), 'engine');
+    ->with(proxy(V8::class, object(V8::class, arguments(names(['arg' => value('some text')])))), 'engine');
 
 // TODO: Replacement for prepare?
 // $contextBuilder->prepare(V8::class, function (V8 $v8, Amp\Injector\Injector $injector) {

@@ -3,6 +3,7 @@
 namespace Amp\Injector\Weaver;
 
 use Amp\Injector\Definitions;
+use Amp\Injector\InjectionException;
 use Amp\Injector\Internal\Reflector;
 use Amp\Injector\Meta\Parameter;
 use Amp\Injector\Weaver;
@@ -12,6 +13,9 @@ use function Amp\Injector\Internal\getDefaultReflector;
 use Amp\Injector\Definition;
 use function Amp\Injector\Internal\normalizeClass;
 use Amp\Injector\Meta\ParameterAttribute;
+use function Amp\Injector\object;
+use function Amp\Injector\singleton;
+use function Amp\Injector\proxy;
 
 class RuntimeTypeWeaver implements Weaver
 {
@@ -49,6 +53,12 @@ class RuntimeTypeWeaver implements Weaver
                 $this->processFactoryParameter($injectorAttribute, $key);
                 return $this->runtimeDefinitions->get($key);
             }
+            if ($injectorAttribute instanceof ParameterAttribute\ProxyParameter) {
+                // TODO: find 8.1 compatible proxy manager 3rd-party
+                throw new InjectionException('Proxy not supported yet');
+                $this->processParameterAttribute($injectorAttribute, $injectorAttribute->class, $key);
+                return $this->runtimeDefinitions->get($key);
+            }
             foreach ($type->getTypes() as $type) {
                 $typeReflection = null;
                 try {
@@ -69,6 +79,11 @@ class RuntimeTypeWeaver implements Weaver
     protected function factoryClass($class)
     {
         return $class.'Factory';
+    }
+
+    protected function proxyClass($class)
+    {
+        return $class.'Proxy';
     }
 
     protected function processFactoryParameter($parameterAttribute, $key): void
@@ -92,10 +107,22 @@ class RuntimeTypeWeaver implements Weaver
             if ($parameterAttribute instanceof ParameterAttribute\Service) {
                 $definition = $this->runtimeDefinitions->get($targetClass);
                 if (!$definition) {
-                    $definition = $parameterAttribute->createDefinition($targetClass);
+                    if ($parameterAttribute instanceof ParameterAttribute\Factory) {
+                        $definition = $parameterAttribute->createDefinition($targetClass);
+                    } else {
+                        $definition = singleton(object($targetClass));
+                    }
                     $this->addDefinition($definition, $targetClass);
                 }
-                $this->addDefinition($definition, $key);
+                if ($parameterAttribute instanceof ParameterAttribute\ProxyParameter) {
+                    $proxyClass = $this->proxyClass($targetClass);
+                    $proxyDefinition = $this->runtimeDefinitions->get($proxyClass);
+                    if (!$proxyDefinition) {
+                        $proxyDefinition = proxy($targetClass, $definition);
+                        $this->addDefinition($proxyDefinition, $proxyClass);
+                    }
+                }
+                $this->addDefinition($proxyDefinition ?? $definition, $key);
             } elseif ($parameterAttribute instanceof ParameterAttribute\Factory) {
                 $definition = $parameterAttribute->createDefinition($targetClass);
                 $this->addDefinition($definition, $key);
