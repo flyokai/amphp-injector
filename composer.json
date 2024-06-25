@@ -49,7 +49,7 @@
     },
     "require": {
         "php": ">=8.0",
-        "ocramius/proxy-manager": "^2.11.1",
+        "ocramius/proxy-manager": "^2.14.0",
         "psr/container": "^1.1 | ^2"
     },
     "require-dev": {
