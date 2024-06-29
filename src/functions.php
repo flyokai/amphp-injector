@@ -2,6 +2,7 @@
 
 namespace Amp\Injector;
 
+use Amp\Injector\Definition\CompositionDefinition;
 use Amp\Injector\Definition\InjectableFactoryDefinition;
 use Amp\Injector\Definition\FactoryDefinition;
 use Amp\Injector\Definition\ProviderDefinition;
@@ -56,6 +57,30 @@ function injectableFactory(\Closure $factory, string $class, ?Arguments $argumen
     $arguments ??= arguments();
 
     return new InjectableFactoryDefinition($executable, $ctorExecutable->getParameters(), $arguments);
+}
+
+function compositionFactory(
+    \Closure $factory,
+    ?Definitions $definitions = null,
+    ?Arguments $arguments = null
+): CompositionDefinition {
+    $executable = new ReflectionFunctionExecutable(new \ReflectionFunction($factory));
+    $arguments ??= arguments();
+    $definitions ??= definitions();
+
+    return new CompositionDefinition($executable, $definitions, $arguments);
+}
+
+function compositeObject(
+    string $class,
+    ?Definitions $definitions = null,
+    ?Arguments $arguments = null
+): CompositionDefinition {
+    $executable = new ReflectionConstructorExecutable($class);
+    $arguments ??= arguments();
+    $definitions ??= definitions();
+
+    return new CompositionDefinition($executable, $definitions, $arguments);
 }
 
 function factory(\Closure $factory, ?Arguments $arguments = null): FactoryDefinition

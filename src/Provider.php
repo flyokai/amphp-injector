@@ -21,5 +21,5 @@ interface Provider
     /**
      * @return array An array of providers which should be initialized first.
      */
-    public function getDependencies(): array;
+    public function getDependencies(): array|Providers;
 }

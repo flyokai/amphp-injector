@@ -2,7 +2,6 @@
 
 namespace Amp\Injector\Provider;
 
-use Amp\Injector\InjectionException;
 use Amp\Injector\Meta\Argument;
 use Amp\Injector\Meta\Executable;
 use Amp\Injector\Provider;
@@ -47,6 +46,6 @@ final class InjectableFactoryProvider implements Provider
 
     public function getDependencies(): array
     {
-        return $this->arguments;
+        return array_map(fn($arg) => $arg->getProvider(), $this->arguments);
     }
 }

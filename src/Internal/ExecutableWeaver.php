@@ -8,8 +8,10 @@ use Amp\Injector\Injector;
 use Amp\Injector\Meta\Argument;
 use Amp\Injector\Meta\Executable;
 use Amp\Injector\Provider;
+use Amp\Injector\Provider\CompositionProvider;
 use Amp\Injector\Provider\InjectableFactoryProvider;
 use Amp\Injector\Provider\FactoryProvider;
+use Amp\Injector\Providers;
 use function Amp\Injector\value;
 
 /** @internal */
@@ -37,8 +39,17 @@ final class ExecutableWeaver
         );
     }
 
+    public static function buildComposition(Executable $executable, Providers $providers, Arguments $arguments, Injector $injector): Provider
+    {
+        return new CompositionProvider(
+            $executable,
+            $providers
+        );
+    }
+
     /**
      * @param Executable $executable
+     * @param array $parameters
      * @param Arguments $arguments
      * @param Injector $injector
      * @return Argument[]

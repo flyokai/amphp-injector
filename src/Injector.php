@@ -47,4 +47,10 @@ final class Injector
         // TODO: Make customizable?
         return ExecutableWeaver::buildCallback($executable, $parameters, $arguments->with($this->weaver), $this);
     }
+
+    public function getCompositionProvider(Executable $executable, Providers $providers, Arguments $arguments): Provider
+    {
+        return ExecutableWeaver::buildComposition($executable, $providers, $arguments->with($this->weaver), $this);
+    }
+
 }

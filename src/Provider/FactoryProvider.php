@@ -44,6 +44,6 @@ final class FactoryProvider implements Provider
 
     public function getDependencies(): array
     {
-        return $this->arguments;
+        return array_map(fn($arg) => $arg->getProvider(), $this->arguments);
     }
 }

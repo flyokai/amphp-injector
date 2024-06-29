@@ -34,12 +34,17 @@ class RuntimeTypeWeaver implements Weaver
         $this->alias = $this->aliasResolver->alias(...);
     }
 
+    static public function parameterKey(string $class, string $parameterName): string
+    {
+        $nClass = normalizeClass($class);
+        return $nClass.'::'.$parameterName;
+    }
+
     public function getDefinition(Parameter $parameter): ?Definition
     {
         if (($type = $parameter->getType()) && $parameter->getDeclaringClass()) {
             $class = $parameter->getDeclaringClass();
-            $nClass = normalizeClass($class);
-            $key = $nClass.'::'.$parameter->getName();
+            $key = self::parameterKey($class, $parameter->getName());
             if ($this->runtimeDefinitions->get($key)) {
                 return $this->runtimeDefinitions->get($key);
             }
