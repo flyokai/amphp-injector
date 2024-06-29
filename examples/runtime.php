@@ -3,6 +3,7 @@
 require __DIR__ . '/bootstrap.php';
 
 use Amp\Injector\Application;
+use Amp\Injector\Definitions;
 use Amp\Injector\Injector;
 use Amp\Injector\Meta\ParameterAttribute\FactoryParameter;
 use Amp\Injector\Meta\ParameterAttribute\PrivateProxy;
@@ -21,7 +22,11 @@ use function Amp\Injector\singleton;
 use function Amp\Injector\types;
 use function Amp\Internal\formatStacktrace;
 
-class Foo
+interface Foo
+{
+
+}
+class FooImpl implements Foo
 {
     public function __construct(
         #[PrivateParameter] protected Bar                  $bar,
@@ -41,7 +46,11 @@ class Foo
     }
 }
 
-class Bar
+interface Bar
+{
+
+}
+class BarImpl implements Bar
 {
     public function __construct(
         #[SharedParameter] protected Baz $baz,
@@ -54,30 +63,53 @@ class Bar
     }
 }
 
-class Baz
+interface Baz
+{
+
+}
+class BazImpl implements Baz
 {
     public function __construct()
     {
     }
 }
 
-class Qux
+interface Qux
+{
+
+}
+class QuxImpl implements Qux
 {
     public function __construct()
     {
     }
 }
 
-$definitions = definitions()
-    ->with(object(Foo::class), Foo::class)
+$aliasResolver = (new \Amp\Injector\AliasResolverImpl())
+    ->with(Foo::class, FooImpl::class)
+    ->with(Bar::class, BarImpl::class)
+    ->with(Baz::class, BazImpl::class)
+    ->with(Qux::class, QuxImpl::class)
 ;
 
-$runtimeTypes = runtimeTypes();
+$definitions = definitions()
+    ->with(object(FooImpl::class), FooImpl::class)
+;
 
-$application = new Application(new Injector(any(
-    automaticTypes($definitions),
+$runtimeTypes = runtimeTypes(
+    new Definitions(), $aliasResolver
+);
+
+$automaticTypes = automaticTypes(
+    $definitions, $aliasResolver
+);
+
+$injector = (new Injector(any(
+    $automaticTypes,
     $runtimeTypes
-)), $definitions);
+)))->withAlias($aliasResolver->alias(...));
+
+$application = new Application($injector, $definitions, $aliasResolver);
 
 /** @var Foo $foo1 */
 $foo1 = $application->getContainer()->get(Foo::class);

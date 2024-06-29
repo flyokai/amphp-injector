@@ -14,10 +14,10 @@ class FactoryParameter implements Service
     ) {
     }
 
-    public function createDefinition(string $class, ?Arguments $arguments = null)
+    public function createDefinition(string $class, \Closure $alias, ?Arguments $arguments = null)
     {
-        $class = $this->class;
-        $__cb = static function (...$args) use ($class) {
+        $class = $alias($this->class);
+        $__cb = static function (...$args) use ($class, $alias) {
             return new $class(...$args);
         };
         return injectableFactory($__cb, $class, $arguments);

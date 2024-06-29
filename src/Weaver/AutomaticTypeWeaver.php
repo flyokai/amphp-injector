@@ -2,6 +2,8 @@
 
 namespace Amp\Injector\Weaver;
 
+use Amp\Injector\AliasResolver;
+use Amp\Injector\AliasResolverImpl;
 use Amp\Injector\Definition;
 use Amp\Injector\Definitions;
 use Amp\Injector\Internal\Reflector;
@@ -18,21 +20,35 @@ final class AutomaticTypeWeaver implements Weaver
     /** @var Definition[][] */
     private array $definitions = [];
 
-    public function __construct(Definitions $definitions)
-    {
+    /** @var callable(string): string|null */
+    private \Closure $alias;
+
+    public function __construct(
+        Definitions $definitions,
+        AliasResolver $aliasResolver = new AliasResolverImpl()
+    ) {
         $this->reflector = getDefaultReflector();
+        $this->alias = $aliasResolver->alias(...);
 
         foreach ($definitions as $id => $definition) {
             if ($type = $definition->getType()) {
                 foreach ($type->getTypes() as $type) {
-                    $this->definitions[normalizeClass($type)][$id] = $definition;
+                    $resolvedType = $this->resolveType($type);
+                    $this->definitions[$resolvedType][$id] = $definition;
 
                     foreach ($this->reflector->getParents($type) as $parent) {
-                        $this->definitions[normalizeClass($parent)][$id] = $definition;
+                        $resolvedParent = $this->resolveType($parent);
+                        $this->definitions[$resolvedParent][$id] = $definition;
                     }
                 }
             }
         }
+    }
+
+    private function resolveType(string $type): string
+    {
+        $type = normalizeClass($type);
+        return ($this->alias)($type) ?? $type;
     }
 
     public function getDefinition(Parameter $parameter): ?Definition

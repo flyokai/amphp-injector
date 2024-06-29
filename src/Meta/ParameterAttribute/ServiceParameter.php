@@ -10,8 +10,9 @@ use function Amp\Injector\singleton;
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class ServiceParameter implements Factory, Service
 {
-    public function createDefinition(string $class, ?Arguments $arguments = null)
+    public function createDefinition(string $class, \Closure $alias, ?Arguments $arguments = null)
     {
-        return singleton(object($class, $arguments));
+        $__class = $alias($class)??$class;
+        return singleton(object($__class, $arguments));
     }
 }

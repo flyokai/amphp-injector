@@ -7,5 +7,11 @@ use Amp\Injector\Meta\ParameterAttribute;
 
 interface Factory extends ParameterAttribute
 {
-    public function createDefinition(string $class, ?Arguments $arguments = null);
+    /**
+     * @param class-string $class
+     * @param callable(string): string|null $alias
+     * @param Arguments|null $arguments
+     * @return mixed
+     */
+    public function createDefinition(string $class, \Closure $alias, ?Arguments $arguments = null);
 }

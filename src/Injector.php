@@ -7,11 +7,30 @@ use Amp\Injector\Meta\Executable;
 
 final class Injector
 {
-    private Weaver $weaver;
+    /** @var callable(string): string */
+    private \Closure $alias;
 
-    public function __construct(Weaver $weaver)
+    public function __construct(
+        private Weaver $weaver
+    ) {
+        $this->alias = fn($a) => null;
+    }
+
+    /**
+     * @param callable(string): string|null $alias
+     * @return $this
+     */
+    public function withAlias(\Closure $alias): self
     {
-        $this->weaver = $weaver;
+        $clone = clone $this;
+        $clone->alias = $alias;
+
+        return $clone;
+    }
+
+    public function alias($alias): ?string
+    {
+        return ($this->alias)($alias);
     }
 
     /**

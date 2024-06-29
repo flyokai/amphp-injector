@@ -2,6 +2,8 @@
 
 namespace Amp\Injector\Weaver;
 
+use Amp\Injector\AliasResolver;
+use Amp\Injector\AliasResolverImpl;
 use Amp\Injector\Definitions;
 use Amp\Injector\InjectionException;
 use Amp\Injector\Internal\Reflector;
@@ -21,10 +23,15 @@ class RuntimeTypeWeaver implements Weaver
 {
     private Reflector $reflector;
 
+    /** @var callable(string): string|null */
+    private \Closure $alias;
+
     public function __construct(
-        public Definitions $runtimeDefinitions = new Definitions()
+        private Definitions $runtimeDefinitions = new Definitions(),
+        private AliasResolver $aliasResolver = new AliasResolverImpl()
     ) {
         $this->reflector = getDefaultReflector();
+        $this->alias = $this->aliasResolver->alias(...);
     }
 
     public function getDefinition(Parameter $parameter): ?Definition
@@ -60,6 +67,7 @@ class RuntimeTypeWeaver implements Weaver
                 return $this->runtimeDefinitions->get($key);
             }
             foreach ($type->getTypes() as $type) {
+                $type = $this->resolveType($type);
                 $typeReflection = null;
                 try {
                     $typeReflection = new ReflectionClass($type);
@@ -76,14 +84,20 @@ class RuntimeTypeWeaver implements Weaver
         return null;
     }
 
+    private function resolveType(string $type): string
+    {
+        $type = normalizeClass($type);
+        return ($this->alias)($type) ?? $type;
+    }
+
     protected function factoryClass($class)
     {
-        return $class.'Factory';
+        return $this->resolveType($class).'Factory';
     }
 
     protected function proxyClass($class)
     {
-        return $class.'Proxy';
+        return $this->resolveType($class).'Proxy';
     }
 
     protected function processFactoryParameter($parameterAttribute, $key): void
@@ -93,7 +107,7 @@ class RuntimeTypeWeaver implements Weaver
                 $targetClass = $this->factoryClass($parameterAttribute->class);
                 $definition = $this->runtimeDefinitions->get($targetClass);
                 if (!$definition) {
-                    $definition = $parameterAttribute->createDefinition($targetClass);
+                    $definition = $parameterAttribute->createDefinition($targetClass, $this->alias);
                     $this->addDefinition($definition, $targetClass);
                 }
                 $this->addDefinition($definition, $key);
@@ -108,7 +122,7 @@ class RuntimeTypeWeaver implements Weaver
                 $definition = $this->runtimeDefinitions->get($targetClass);
                 if (!$definition) {
                     if ($parameterAttribute instanceof ParameterAttribute\Factory) {
-                        $definition = $parameterAttribute->createDefinition($targetClass);
+                        $definition = $parameterAttribute->createDefinition($targetClass, $this->alias);
                     } else {
                         $definition = singleton(object($targetClass));
                     }
@@ -124,7 +138,7 @@ class RuntimeTypeWeaver implements Weaver
                 }
                 $this->addDefinition($proxyDefinition ?? $definition, $key);
             } elseif ($parameterAttribute instanceof ParameterAttribute\Factory) {
-                $definition = $parameterAttribute->createDefinition($targetClass);
+                $definition = $parameterAttribute->createDefinition($targetClass, $this->alias);
                 $this->addDefinition($definition, $key);
             }
         }

@@ -9,8 +9,9 @@ use function Amp\Injector\object;
 #[Attribute(Attribute::TARGET_PARAMETER)]
 class PrivateParameter implements Factory
 {
-    public function createDefinition(string $class, ?Arguments $arguments = null)
+    public function createDefinition(string $class, \Closure $alias, ?Arguments $arguments = null)
     {
-        return object($class, $arguments);
+        $__class = $alias($class)??$class;
+        return object($__class, $arguments);
     }
 }

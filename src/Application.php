@@ -6,21 +6,22 @@ use Amp\Injector\Internal\ApplicationLifecycle;
 
 final class Application implements Lifecycle
 {
-    private Injector $injector;
-    private Container $container;
     private ApplicationLifecycle $lifecycle;
 
     /**
      * @throws InjectionException
      */
-    public function __construct(Injector $injector, Definitions $definitions)
+    public function __construct(
+        private Injector $injector,
+        Definitions $definitions,
+        AliasResolver $aliasResolver = new AliasResolverImpl,
+        private Container $container = new RootContainer,
+    )
     {
-        $this->injector = $injector;
-        $this->container = new RootContainer;
-
         foreach ($definitions as $id => $definition) {
             $this->container = $this->container->with($id, $definition->build($injector));
         }
+        $this->container = $this->container->withAlias($aliasResolver->alias(...));
 
         $this->lifecycle = new ApplicationLifecycle($this->container);
     }

@@ -85,14 +85,18 @@ function value(mixed $value): Definition
     return new ProviderDefinition(new ValueProvider($value));
 }
 
-function automaticTypes(Definitions $definitions): AutomaticTypeWeaver
-{
-    return new AutomaticTypeWeaver($definitions);
+function automaticTypes(
+    Definitions $definitions,
+    AliasResolver $aliasResolver = new AliasResolverImpl()
+): AutomaticTypeWeaver {
+    return new AutomaticTypeWeaver($definitions, $aliasResolver);
 }
 
-function runtimeTypes(Definitions $definitions = new Definitions()): RuntimeTypeWeaver
-{
-    return new RuntimeTypeWeaver($definitions);
+function runtimeTypes(
+    Definitions $definitions = new Definitions(),
+    AliasResolver $aliasResolver = new AliasResolverImpl()
+): RuntimeTypeWeaver {
+    return new RuntimeTypeWeaver($definitions, $aliasResolver);
 }
 
 function names(array $definitions = []): NameWeaver

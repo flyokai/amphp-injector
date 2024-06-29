@@ -14,8 +14,9 @@ class PrivateProxy implements Factory, ProxyParameter
         readonly public string $class
     ) {
     }
-    public function createDefinition(string $class, ?Arguments $arguments = null)
+    public function createDefinition(string $class, \Closure $alias, ?Arguments $arguments = null)
     {
-        return proxy($class, object($this->class, $arguments));
+        $__class = $alias($this->class)??$this->class;
+        return proxy($class, object($__class, $arguments));
     }
 }
