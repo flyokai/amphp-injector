@@ -24,6 +24,19 @@ final class CompositionDefinition implements Definition
         $this->arguments = $arguments;
     }
 
+    public function getDefinitions(): Definitions
+    {
+        return $this->definitions;
+    }
+
+    public function extendDefinitions(Definitions $with): self
+    {
+        foreach ($with as $key => $definition) {
+            $this->definitions = $this->definitions->with($definition, $key);
+        }
+        return $this;
+    }
+
     public function getType(): ?Type
     {
         return $this->executable->getType();

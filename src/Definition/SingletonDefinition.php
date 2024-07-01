@@ -6,8 +6,9 @@ use Amp\Injector\Definition;
 use Amp\Injector\Injector;
 use Amp\Injector\Meta\Type;
 use Amp\Injector\Provider;
+use Amp\Injector\ServiceDefinition;
 
-final class SingletonDefinition implements Definition
+final class SingletonDefinition implements Definition, ServiceDefinition
 {
     private \WeakMap $instances;
     private Definition $definition;
