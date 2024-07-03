@@ -14,6 +14,7 @@ final class Application implements Lifecycle
     public function __construct(
         private Injector $injector,
         Definitions $definitions,
+        public readonly string $name,
         AliasResolver $aliasResolver = new AliasResolverImpl,
         private Container $container = new RootContainer,
     )

@@ -22,7 +22,9 @@ class AliasResolverImpl implements AliasResolver
 
     public function alias(string $alias): ?string
     {
-        $alias = normalizeClass($alias);
+        try {
+            $alias = normalizeClass($alias);
+        } catch (\Error) {}
         return $this->alias[$alias]??null;
     }
 

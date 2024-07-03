@@ -45,9 +45,9 @@ function arguments(Weaver ...$weavers): Arguments
     return $arguments;
 }
 
-function singleton(Definition $definition): SingletonDefinition
+function singleton(Definition $definition, $onStart=false): SingletonDefinition
 {
-    return new SingletonDefinition($definition);
+    return new SingletonDefinition($definition, $onStart);
 }
 
 function injectableFactory(\Closure $factory, string $class, ?Arguments $arguments = null): InjectableFactoryDefinition

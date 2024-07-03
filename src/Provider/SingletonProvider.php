@@ -28,8 +28,12 @@ final class SingletonProvider implements Provider, Lifecycle
     private array $onStart = [];
     private array $onStop = [];
 
-    public function __construct(Provider $provider)
-    {
+    private bool $started = false;
+
+    public function __construct(
+        Provider $provider,
+        public readonly bool $mustStart = false
+    ) {
         $this->provider = $provider;
     }
 
@@ -43,18 +47,14 @@ final class SingletonProvider implements Provider, Lifecycle
 
     public function onStart(callable $callback): self
     {
-        $clone = clone $this;
-        $clone->onStart[] = $callback;
-
-        return $clone;
+        $this->onStart[] = $callback;
+        return $this;
     }
 
     public function onStop(callable $callback): self
     {
-        $clone = clone $this;
-        $clone->onStop[] = $callback;
-
-        return $clone;
+        $this->onStop[] = $callback;
+        return $this;
     }
 
     public function unwrap(): ?Provider
@@ -69,6 +69,7 @@ final class SingletonProvider implements Provider, Lifecycle
 
     public function start(): void
     {
+        $this->started = true;
         if (!$this->lazy) {
             $this->get(new ProviderContext);
         }
@@ -78,6 +79,9 @@ final class SingletonProvider implements Provider, Lifecycle
     {
         // TODO: Locking?
         if ($this->status === self::STATUS_NONE) {
+            if ($this->mustStart && !$this->started) {
+                throw new InjectionException('Provider value could be used only after start');
+            }
             $this->status = self::STATUS_INITIALIZING;
             $this->value = $this->provider->get(new ProviderContext); // hide context, because singleton
             $this->status = self::STATUS_INITIALIZED;

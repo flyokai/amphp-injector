@@ -13,8 +13,10 @@ final class SingletonDefinition implements Definition, ServiceDefinition
     private \WeakMap $instances;
     private Definition $definition;
 
-    public function __construct(Definition $definition)
-    {
+    public function __construct(
+        Definition $definition,
+        public readonly bool $mustStart = false
+    ) {
         $this->definition = $definition;
         $this->instances = new \WeakMap;
     }
@@ -31,6 +33,9 @@ final class SingletonDefinition implements Definition, ServiceDefinition
 
     public function build(Injector $injector): Provider
     {
-        return $this->instances[$injector] ??= new Provider\SingletonProvider($this->definition->build($injector));
+        return $this->instances[$injector] ??= new Provider\SingletonProvider(
+            $this->definition->build($injector),
+            $this->mustStart
+        );
     }
 }

@@ -3,6 +3,7 @@
 use Amp\Injector\Application;
 use Amp\Injector\Definitions;
 use Amp\Injector\Injector;
+use Amp\Injector\ProviderContext;
 use function Amp\Injector\any;
 use function Amp\Injector\arguments;
 use function Amp\Injector\names;
@@ -10,7 +11,7 @@ use function Amp\Injector\object;
 use function Amp\Injector\singleton;
 use function Amp\Injector\value;
 
-require __DIR__ . "/../vendor/autoload.php";
+require __DIR__ . '/bootstrap.php';
 
 class Singleton
 {
@@ -26,11 +27,16 @@ $stdClass = new stdClass;
 $stdClass->foo = "foobar";
 
 $definitions = (new Definitions)
-    ->with(singleton(object(Singleton::class, arguments(names(['std' => value($stdClass)])))), 'hello_world');
+    ->with(singleton(object(Singleton::class, arguments(names(['std' => value($stdClass)])))), 'hello_world')
+    ->with(singleton(object(Singleton::class, arguments(names(['std' => value($stdClass)]))), true), 'on_start')
+;
 
-$application = new Application(new Injector(any()), $definitions);
+$application = new Application(new Injector(any()), $definitions, 'hello');
 
-$a = $application->getContainer()->get('hello_world');
+$application->start();
+
+//$a = $application->getContainer()->get('hello_world');
+$a = $application->getContainer()->get('on_start');
 
 print $a->std->foo . PHP_EOL;
 

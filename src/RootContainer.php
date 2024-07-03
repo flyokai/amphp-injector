@@ -62,7 +62,11 @@ final class RootContainer implements Container
 
     private function id(string $id): string
     {
-        return normalizeClass($this->alias($id) ?? $id);
+        $id = $this->alias($id) ?? $id;
+        try {
+            $id = normalizeClass($id);
+        } catch (\Error) {}
+        return $id;
     }
 
     public function alias(string $id): ?string
