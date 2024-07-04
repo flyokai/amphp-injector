@@ -31,15 +31,19 @@ final class ExecutableWeaver
     /**
      * @throws InjectionException
      */
-    public static function buildCallback(Executable $executable, array $parameters, Arguments $arguments, Injector $injector): Provider
+    public static function buildCallback(
+        Executable $executable, array $parameters, Arguments $arguments, Injector $injector
+    ): Provider
     {
         return new InjectableFactoryProvider(
             $executable,
-            ...self::buildArguments($executable, $parameters, $arguments, $injector)
+            ...self::buildArguments($executable, $parameters, $arguments, $injector, true)
         );
     }
 
-    public static function buildComposition(Executable $executable, Providers $providers, Arguments $arguments, Injector $injector): Provider
+    public static function buildComposition(
+        Executable $executable, Providers $providers, Arguments $arguments, Injector $injector
+    ): Provider
     {
         return new CompositionProvider(
             $executable,
@@ -56,7 +60,9 @@ final class ExecutableWeaver
      *
      * @throws InjectionException
      */
-    private static function buildArguments(Executable $executable, array $parameters, Arguments $arguments, Injector $injector): array
+    private static function buildArguments(
+        Executable $executable, array $parameters, Arguments $arguments, Injector $injector, $silent=false
+    ): array
     {
         $count = \count($parameters);
         $variadic = null;
@@ -75,7 +81,13 @@ final class ExecutableWeaver
                 }
             }
 
-            $definition ??= throw new InjectionException('Could not find a suitable definition for ' . $parameter);
+            if (!$silent) {
+                $definition ??= throw new InjectionException(
+                    'Could not find a suitable definition for ' . $parameter
+                );
+            } elseif (!$definition) {
+                continue;
+            }
 
             $args[$index] = new Argument($parameter, $definition->build($injector));
 

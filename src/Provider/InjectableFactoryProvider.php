@@ -22,10 +22,10 @@ final class InjectableFactoryProvider implements Provider
     {
         $__args = [];
         $__named = [];
-        foreach ($this->arguments as $argument) {
+        foreach ($this->arguments as $index=>$argument) {
             $__name = $argument->getParameter()->getName();
             $__arg = $argument->getProvider()->get($context->withParameter($argument->getParameter()));
-            $__args[] = $__arg;
+            $__args[$index] = $__arg;
             $__named[$__name] = $__arg;
         }
         $__exec = $this->executable;
