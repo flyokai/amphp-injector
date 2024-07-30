@@ -12,6 +12,8 @@ use Psr\Container\ContainerInterface;
  */
 interface Container extends ContainerInterface, \IteratorAggregate
 {
+    public function alias(string $id): ?string;
+
     public function get(string $id): mixed;
 
     public function has(string $id): bool;
