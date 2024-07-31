@@ -2,6 +2,8 @@
 
 namespace Amp\Injector;
 
+use function Amp\Injector\Internal\normalizeClass;
+
 final class Definitions implements \IteratorAggregate
 {
     private static int $nextId = 0;
@@ -11,6 +13,9 @@ final class Definitions implements \IteratorAggregate
 
     public function with(Definition $definition, ?string $id = null): self
     {
+        try {
+            $id = normalizeClass($id);
+        } catch (\Error) {}
         $clone = clone $this;
         $clone->definitions[$id ?? $clone->generateId($definition)] = $definition;
 
@@ -26,6 +31,9 @@ final class Definitions implements \IteratorAggregate
 
     public function get(string $id): ?Definition
     {
+        try {
+            $id = normalizeClass($id);
+        } catch (\Error) {}
         return $this->definitions[$id] ?? null;
     }
 
