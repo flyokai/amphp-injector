@@ -95,25 +95,25 @@ class RuntimeTypeWeaver implements Weaver
         return ($this->alias)($type) ?? $type;
     }
 
-    protected function factoryClass($class)
+    protected function factoryId($class)
     {
-        return $this->resolveType($class).'Factory';
+        return $this->resolveType($class).'\0factory';
     }
 
-    protected function proxyClass($class)
+    protected function proxyId($class)
     {
-        return $this->resolveType($class).'Proxy';
+        return $this->resolveType($class).'\0proxy';
     }
 
     protected function processFactoryParameter($parameterAttribute, $key): void
     {
         if (!$this->runtimeDefinitions->get($key)) {
             if ($parameterAttribute instanceof ParameterAttribute\FactoryParameter) {
-                $targetClass = $this->factoryClass($parameterAttribute->class);
-                $definition = $this->runtimeDefinitions->get($targetClass);
+                $factoryId = $this->factoryId($parameterAttribute->class);
+                $definition = $this->runtimeDefinitions->get($factoryId);
                 if (!$definition) {
-                    $definition = $parameterAttribute->createDefinition($targetClass, $this->alias);
-                    $this->addDefinition($definition, $targetClass);
+                    $definition = $parameterAttribute->createDefinition($this->alias);
+                    $this->addDefinition($definition, $factoryId);
                 }
                 $this->addDefinition($definition, $key);
             }
@@ -134,11 +134,11 @@ class RuntimeTypeWeaver implements Weaver
                     $this->addDefinition($definition, $targetClass);
                 }
                 if ($parameterAttribute instanceof ParameterAttribute\ProxyParameter) {
-                    $proxyClass = $this->proxyClass($targetClass);
-                    $proxyDefinition = $this->runtimeDefinitions->get($proxyClass);
+                    $proxyId = $this->proxyId($targetClass);
+                    $proxyDefinition = $this->runtimeDefinitions->get($proxyId);
                     if (!$proxyDefinition) {
                         $proxyDefinition = proxy($targetClass, $definition);
-                        $this->addDefinition($proxyDefinition, $proxyClass);
+                        $this->addDefinition($proxyDefinition, $proxyId);
                     }
                 }
                 $this->addDefinition($proxyDefinition ?? $definition, $key);

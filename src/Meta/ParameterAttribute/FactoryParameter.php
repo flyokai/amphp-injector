@@ -14,7 +14,7 @@ class FactoryParameter implements Service
     ) {
     }
 
-    public function createDefinition(string $class, \Closure $alias, ?Arguments $arguments = null)
+    public function createDefinition(\Closure $alias, ?Arguments $arguments = null)
     {
         $class = $alias($this->class)??$this->class;
         $__cb = static function (...$args) use ($class, $alias) {
