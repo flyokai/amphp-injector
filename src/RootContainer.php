@@ -20,9 +20,9 @@ final class RootContainer implements Container
     public function with(string $id, Provider $provider): self
     {
         $clone = clone $this;
-        try {
-            $id = normalizeClass($id);
-        } catch (\Error) {}
+        if (false !== ($__id = normalizeClass($id, false))) {
+            $id = $__id;
+        }
         $clone->providers[$id] = $provider;
 
         return $clone;
@@ -63,9 +63,9 @@ final class RootContainer implements Container
     private function id(string $id): string
     {
         $id = $this->alias($id) ?? $id;
-        try {
-            $id = normalizeClass($id);
-        } catch (\Error) {}
+        if (false !== ($__id = normalizeClass($id, false))) {
+            $id = $__id;
+        }
         return $id;
     }
 

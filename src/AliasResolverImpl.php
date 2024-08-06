@@ -20,12 +20,12 @@ class AliasResolverImpl implements AliasResolver
         return $clone;
     }
 
-    public function alias(string $alias): ?string
+    public function alias(string $id): ?string
     {
-        try {
-            $alias = normalizeClass($alias);
-        } catch (\Error) {}
-        return $this->alias[$alias]??null;
+        if (false !== ($__id = normalizeClass($id, false))) {
+            $id = $__id;
+        }
+        return $this->alias[$id]??null;
     }
 
 }

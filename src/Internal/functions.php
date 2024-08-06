@@ -3,7 +3,7 @@
 namespace Amp\Injector\Internal;
 
 /** @internal */
-function normalizeClass(string $class): string
+function normalizeClass(string $class, bool $throw = true): string|bool
 {
     static $cache = [];
 
@@ -13,7 +13,11 @@ function normalizeClass(string $class): string
 
     // See https://www.php.net/manual/en/language.oop5.basic.php
     if (!\preg_match('(^\\\\?(?:[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\\\\)*[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*$)', $class)) {
-        throw new \Error('Invalid class name: ' . $class);
+        if ($throw) {
+            throw new \Error('Invalid class name: ' . $class);
+        } else {
+            return false;
+        }
     }
 
     $normalizedClass = \strtolower(\ltrim($class, '\\'));

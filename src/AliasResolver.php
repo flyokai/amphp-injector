@@ -5,8 +5,8 @@ namespace Amp\Injector;
 interface AliasResolver
 {
     /**
-     * @param string $alias
+     * @param string $id
      * @return class-string|null
      */
-    public function alias(string $alias): ?string;
+    public function alias(string $id): ?string;
 }

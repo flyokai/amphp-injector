@@ -13,9 +13,9 @@ final class Definitions implements \IteratorAggregate
 
     public function with(Definition $definition, ?string $id = null): self
     {
-        try {
-            $id = normalizeClass($id);
-        } catch (\Error) {}
+        if (false !== ($__id = normalizeClass($id, false))) {
+            $id = $__id;
+        }
         $clone = clone $this;
         $clone->definitions[$id ?? $clone->generateId($definition)] = $definition;
 
@@ -31,9 +31,9 @@ final class Definitions implements \IteratorAggregate
 
     public function get(string $id): ?Definition
     {
-        try {
-            $id = normalizeClass($id);
-        } catch (\Error) {}
+        if (false !== ($__id = normalizeClass($id, false))) {
+            $id = $__id;
+        }
         return $this->definitions[$id] ?? null;
     }
 
