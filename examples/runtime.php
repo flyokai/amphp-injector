@@ -5,6 +5,8 @@ require __DIR__ . '/bootstrap.php';
 use Amp\Injector\Application;
 use Amp\Injector\Composition\Composition;
 use Amp\Injector\Composition\CompositionImpl;
+use Amp\Injector\Composition\CompositionItem;
+use Amp\Injector\Composition\CompositionOrdered;
 use Amp\Injector\Definitions;
 use Amp\Injector\Injector;
 use Amp\Injector\Meta\ParameterAttribute\FactoryParameter;
@@ -26,6 +28,7 @@ use function Amp\Injector\object;
 use function Amp\Injector\runtimeTypes;
 use function Amp\Injector\singleton;
 use function Amp\Injector\types;
+use function Amp\Injector\value;
 use function Amp\Internal\formatStacktrace;
 
 interface Foo
@@ -109,7 +112,8 @@ interface CompositionContainer
 class CompositionContainerImpl implements CompositionContainer
 {
     public function __construct(
-        private MyComposition $compositeArray
+        private MyComposition $compositeArray,
+        private CompositionOrdered $compositeSorted
     ) {
     }
 }
@@ -127,8 +131,32 @@ $compositionDefinitions = definitions()
     ->with(singleton(object(BazImpl::class)), 'baz1')
     ->with(singleton(object(BazImpl::class)), 'baz2')
 ;
+$sortedComposDefinitions = definitions()
+    ->with(object(
+        CompositionItem::class,
+        arguments()->with(names()
+            ->with('after', value(['bar']))
+            ->with('value', object(BazImpl::class))
+        )
+    ), 'baz')
+    ->with(object(
+        CompositionItem::class,
+        arguments()->with(names()
+            ->with('before', value(['bar']))
+            ->with('value', object(FooImpl::class))
+        )
+    ), 'foo')
+    ->with(object(
+        CompositionItem::class,
+        arguments()->with(names()
+            ->with('value', object(BarImpl::class))
+        )
+    ), 'bar')
+;
+
 $compositionWeaver = names()
     ->with('compositeArray', compositionFactory(MyCompositionImpl::selfFactory(), $compositionDefinitions))
+    ->with('compositeSorted', compositionFactory(CompositionOrdered::selfFactory(), $sortedComposDefinitions))
 ;
 $compositionArguments = arguments()
     ->with($compositionWeaver)
@@ -152,7 +180,7 @@ $injector = (new Injector(any(
     $runtimeTypes
 )))->withAlias($aliasResolver->alias(...));
 
-$application = new Application($injector, $definitions, $aliasResolver);
+$application = new Application($injector, $definitions, 'runtime-example', $aliasResolver);
 
 /** @var Foo $foo1 */
 #$foo1 = $application->getContainer()->get(Foo::class);
