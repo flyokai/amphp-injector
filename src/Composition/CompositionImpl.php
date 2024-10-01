@@ -6,13 +6,17 @@ use ArrayIterator;
 
 class CompositionImpl extends \ArrayObject implements Composition
 {
-    static public function selfFactory(): \Closure
+    static public function selfFactory(int $flags = 0, string $iteratorClass = ArrayIterator::class): \Closure
     {
-        return (fn (...$args) => static::fromArgs(...$args))->bindTo(null, static::class);
-    }
-    static public function fromArgs(...$args): static
-    {
-        return new static($args);
+        static $cache = [];
+        $key = sprintf('%d-%s-%s', $flags, $iteratorClass, static::class);
+        if (!isset($cache[$key])) {
+            $cache[$key] = static function (...$args) use ($flags, $iteratorClass) {
+                return new static($args, $flags, $iteratorClass);
+            };
+            $cache[$key] = $cache[$key]->bindTo(null, static::class);
+        }
+        return $cache[$key];
     }
 
 }

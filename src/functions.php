@@ -89,15 +89,21 @@ function compositionItem(
     array $before = [],
     array $after = [],
     array $depends = [],
-    ?Arguments $arguments = null
+    ?Arguments $arguments = null,
+    ...$args
 ): FactoryDefinition {
     $arguments ??= arguments();
-    $arguments = $arguments->with(names()
+    $names = names()
         ->with('before', value($before))
         ->with('after', value($after))
         ->with('depends', value($depends))
-        ->with('value', $definition)
-    );
+        ->with('value', $definition);
+
+    foreach ($args as $ak=>$av) {
+        $names = $names->with($ak, value($av));
+    }
+
+    $arguments = $arguments->with($names);
 
     return object(
         CompositionItem::class,
