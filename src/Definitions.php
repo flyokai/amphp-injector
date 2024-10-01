@@ -13,10 +13,11 @@ final class Definitions implements \IteratorAggregate
 
     public function with(Definition $definition, ?string $id = null): self
     {
+        $clone = clone $this;
+        $id ??= $clone->generateId($definition);
         if (false !== ($__id = normalizeClass($id, false))) {
             $id = $__id;
         }
-        $clone = clone $this;
         $clone->definitions[$id ?? $clone->generateId($definition)] = $definition;
 
         return $clone;

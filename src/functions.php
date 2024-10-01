@@ -2,6 +2,7 @@
 
 namespace Amp\Injector;
 
+use Amp\Injector\Composition\CompositionItem;
 use Amp\Injector\Definition\CompositionDefinition;
 use Amp\Injector\Definition\InjectableFactoryDefinition;
 use Amp\Injector\Definition\FactoryDefinition;
@@ -81,6 +82,27 @@ function compositeObject(
     $definitions ??= definitions();
 
     return new CompositionDefinition($executable, $definitions, $arguments);
+}
+
+function compositionItem(
+    Definition $definition,
+    array $before = [],
+    array $after = [],
+    array $depends = [],
+    ?Arguments $arguments = null
+): FactoryDefinition {
+    $arguments ??= arguments();
+    $arguments = $arguments->with(names()
+        ->with('before', value($before))
+        ->with('after', value($after))
+        ->with('depends', value($depends))
+        ->with('value', $definition)
+    );
+
+    return object(
+        CompositionItem::class,
+        $arguments
+    );
 }
 
 function factory(\Closure $factory, ?Arguments $arguments = null): FactoryDefinition
