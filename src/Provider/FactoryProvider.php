@@ -25,7 +25,12 @@ final class FactoryProvider implements Provider
             $args = [];
 
             foreach ($this->arguments as $argument) {
-                $args[] = $argument->getProvider()->get($context->withParameter($argument->getParameter()));
+                $parameter = $argument->getParameter();
+                if ($parameter->isVariadic()) {
+                    $args[$argument->getName()] = $argument->getProvider()->get($context->withParameter($parameter));
+                } else {
+                    $args[] = $argument->getProvider()->get($context->withParameter($parameter));
+                }
             }
 
             return ($this->executable)(...$args);

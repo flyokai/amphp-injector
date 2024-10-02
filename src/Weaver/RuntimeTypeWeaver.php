@@ -40,8 +40,11 @@ class RuntimeTypeWeaver implements Weaver
         return $nClass.'::'.$parameterName;
     }
 
-    public function getDefinition(Parameter $parameter): ?Definition
+    public function getDefinition(int|string|Parameter $parameter): ?Definition
     {
+        if (is_scalar($parameter)) {
+            throw new InjectionException('int|string parameter is not supported');
+        }
         if (($type = $parameter->getType()) && $parameter->getDeclaringClass()) {
             $class = $parameter->getDeclaringClass();
             $key = self::parameterKey($class, $parameter->getName());

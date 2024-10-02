@@ -6,11 +6,11 @@ use Amp\Injector\Definition;
 use Amp\Injector\Meta\Parameter;
 use Amp\Injector\Weaver;
 
-final class NameWeaver implements Weaver
+final class NameWeaver implements Weaver, NameWise
 {
     private array $names = [];
 
-    public function with(string $name, Definition $definition): self
+    public function with(int|string $name, Definition $definition): self
     {
         $clone = clone $this;
         $clone->names[$name] = $definition;
@@ -18,8 +18,14 @@ final class NameWeaver implements Weaver
         return $clone;
     }
 
-    public function getDefinition(Parameter $parameter): ?Definition
+    public function getDefinition(int|string|Parameter $parameter): ?Definition
     {
-        return $this->names[$parameter->getName()] ?? null;
+        $name = $parameter instanceof Parameter ? $parameter->getName() : $parameter;
+        return $this->names[$name] ?? null;
+    }
+
+    public function getNames(): array
+    {
+        return $this->names;
     }
 }

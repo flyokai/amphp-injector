@@ -66,10 +66,15 @@ final class ExecutableWeaver
     {
         $count = \count($parameters);
         $variadic = null;
-        $args = [];
+        $usedNames = $args = [];
 
         for ($index = 0; $index < $count; $index++) {
             $parameter = $parameters[$index];
+
+            if ($parameter->isVariadic()) {
+                $variadic = $parameter;
+                continue;
+            }
 
             $definition = $arguments->getDefinition($parameter);
             $definition ??= $parameter->isOptional() ? value($parameter->getDefaultValue()) : null;
@@ -89,20 +94,20 @@ final class ExecutableWeaver
                 continue;
             }
 
-            $args[$index] = new Argument($parameter, $definition->build($injector));
+            $usedNames[] = $parameter->getName();
 
-            if ($parameter->isVariadic()) {
-                $variadic = $parameter;
-            }
+            $args[$index] = new Argument($parameter, $definition->build($injector));
         }
 
-        // TODO
-        // if ($variadic) {
-        //     $variadicArguments = $this->getVariadicArguments($count - 1, $variadic);
-        //     foreach ($variadicArguments as $index => $argument) {
-        //         $args[$index] = $argument;
-        //     }
-        // }
+        if ($variadic) {
+            $names = $arguments->getNames();
+            foreach ($names as $name => $definition) {
+                if (!in_array($name, $usedNames)) {
+                    $name = is_int($name) ? $name+$index : $name;
+                    $args[$name] = new Argument($variadic, $definition->build($injector), $name);
+                }
+            }
+        }
 
         return $args;
     }

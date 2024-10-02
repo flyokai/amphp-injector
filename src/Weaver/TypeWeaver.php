@@ -3,6 +3,7 @@
 namespace Amp\Injector\Weaver;
 
 use Amp\Injector\Definition;
+use Amp\Injector\InjectionException;
 use Amp\Injector\Internal\Reflector;
 use Amp\Injector\Meta\Parameter;
 use Amp\Injector\Weaver;
@@ -38,8 +39,11 @@ final class TypeWeaver implements Weaver
         return $clone;
     }
 
-    public function getDefinition(Parameter $parameter): ?Definition
+    public function getDefinition(int|string|Parameter $parameter): ?Definition
     {
+        if (is_scalar($parameter)) {
+            throw new InjectionException('int|string parameter is not supported');
+        }
         if ($type = $parameter->getType()) {
             foreach ($type->getTypes() as $type) {
                 $key = normalizeClass($type);

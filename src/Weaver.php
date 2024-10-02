@@ -9,5 +9,5 @@ interface Weaver
     /**
      * @throws InjectionException
      */
-    public function getDefinition(Parameter $parameter): ?Definition;
+    public function getDefinition(int|string|Parameter $parameter): ?Definition;
 }

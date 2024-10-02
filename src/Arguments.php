@@ -3,9 +3,11 @@
 namespace Amp\Injector;
 
 use Amp\Injector\Meta\Parameter;
+use Amp\Injector\Weaver\NameWeaver;
+use Amp\Injector\Weaver\NameWise;
 
 // TODO Readd index
-final class Arguments implements Weaver
+final class Arguments implements Weaver, NameWise
 {
     /** @var Weaver[] */
     private array $weavers = [];
@@ -18,14 +20,28 @@ final class Arguments implements Weaver
         return $clone;
     }
 
-    public function getDefinition(Parameter $parameter): ?Definition
+    public function getDefinition(int|string|Parameter $parameter): ?Definition
     {
         foreach ($this->weavers as $weaver) {
+            if (is_scalar($parameter) && !$weaver instanceof NameWise) {
+                continue;
+            }
             if ($definition = $weaver->getDefinition($parameter)) {
                 return $definition;
             }
         }
 
         return null;
+    }
+
+    public function getNames(): array
+    {
+        $names = [];
+        foreach ($this->weavers as $weaver) {
+            if ($weaver instanceof NameWeaver) {
+                $names = array_merge($names, $weaver->getNames());
+            }
+        }
+        return $names;
     }
 }
