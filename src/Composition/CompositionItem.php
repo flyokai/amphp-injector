@@ -15,7 +15,11 @@ class CompositionItem
         $this->data = $args;
     }
 
-    public function __get(string $name)
+    /**
+     * @param string $name
+     * @return mixed|null
+     */
+    public function __get(string $name): mixed
     {
         return $this->data[$name] ?? null;
     }
