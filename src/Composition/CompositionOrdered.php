@@ -26,7 +26,7 @@ class CompositionOrdered extends CompositionImpl
         parent::__construct($sorted, $flags, $iteratorClass);
     }
 
-    static public function selfFactory(
+    public static function selfFactory(
         int $flags = 0, string $iteratorClass = ArrayIterator::class, ?\Closure $sorter=null
     ): \Closure
     {
@@ -44,13 +44,13 @@ class CompositionOrdered extends CompositionImpl
         return $cache[$key];
     }
 
-    static public function defaultSorter()
+    public static function defaultSorter()
     {
         static $defaultSorter;
         return $defaultSorter ??= self::topSort(...);
     }
 
-    static public function topSort(array $array): array
+    public static function topSort(array $array): array
     {
         foreach ($array as $name => $item) {
             if (!is_string($name)) {

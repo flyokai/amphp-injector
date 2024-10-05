@@ -6,7 +6,7 @@ use ArrayIterator;
 
 class CompositionImpl extends \ArrayObject implements Composition
 {
-    static public function selfFactory(int $flags = 0, string $iteratorClass = ArrayIterator::class): \Closure
+    public static function selfFactory(int $flags = 0, string $iteratorClass = ArrayIterator::class): \Closure
     {
         static $cache = [];
         $key = sprintf('%d-%s-%s', $flags, $iteratorClass, static::class);

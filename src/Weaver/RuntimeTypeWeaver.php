@@ -34,7 +34,7 @@ class RuntimeTypeWeaver implements Weaver
         $this->alias = $this->aliasResolver->alias(...);
     }
 
-    static public function parameterKey(string $class, string $parameterName): string
+    public static function parameterKey(string $class, string $parameterName): string
     {
         $nClass = normalizeClass($class);
         return $nClass.'::'.$parameterName;
