@@ -5,11 +5,11 @@ namespace Amp\Injector\Internal;
 /**
  * @param string $class
  * @param bool $throw
- * @return string|bool
+ * @return class-string|false
  * @throws \Error
  * @internal
  */
-function normalizeClass(string $class, bool $throw = true): string|bool
+function normalizeClass(string $class, bool $throw = true): string|false
 {
     static $cache = [];
 
@@ -26,6 +26,7 @@ function normalizeClass(string $class, bool $throw = true): string|bool
         }
     }
 
+    /** @var class-string $normalizedClass */
     $normalizedClass = \strtolower(\ltrim($class, '\\'));
 
     $cache[$class] = $normalizedClass;
