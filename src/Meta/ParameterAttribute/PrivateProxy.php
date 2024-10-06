@@ -2,6 +2,8 @@
 
 namespace Amp\Injector\Meta\ParameterAttribute;
 
+use Amp\Injector\Definition;
+use Amp\Injector\InjectionException;
 use Attribute;
 use Amp\Injector\Arguments;
 use function Amp\Injector\object;
@@ -14,8 +16,10 @@ class PrivateProxy implements Factory, ProxyParameter
         readonly public string $class
     ) {
     }
-    public function createDefinition(string $class, \Closure $alias, ?Arguments $arguments = null)
+
+    public function createDefinition(string $class, \Closure $alias, ?Arguments $arguments = null): Definition
     {
+        /** @var class-string $__class */
         $__class = $alias($this->class)??$this->class;
         return proxy($class, object($__class, $arguments));
     }

@@ -2,7 +2,13 @@
 
 namespace Amp\Injector\Internal;
 
-/** @internal */
+/**
+ * @param string $class
+ * @param bool $throw
+ * @return string|bool
+ * @throws \Error
+ * @internal
+ */
 function normalizeClass(string $class, bool $throw = true): string|bool
 {
     static $cache = [];

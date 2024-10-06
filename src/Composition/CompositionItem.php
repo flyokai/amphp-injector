@@ -4,13 +4,24 @@ namespace Amp\Injector\Composition;
 
 class CompositionItem
 {
+    /**
+     * @var mixed[]
+     */
     protected array $data;
+
+    /**
+     * @param mixed $value
+     * @param string[] $before
+     * @param string[] $after
+     * @param string[] $depends
+     * @param mixed ...$args
+     */
     public function __construct(
         public readonly mixed $value,
         public readonly array $before = [],
         public readonly array $after = [],
         public array $depends = [],
-        ...$args
+        mixed ...$args
     ) {
         $this->data = $args;
     }
@@ -24,11 +35,18 @@ class CompositionItem
         return $this->data[$name] ?? null;
     }
 
+    /**
+     * @return string[]
+     */
     public function depends(): array
     {
         return $this->depends;
     }
 
+    /**
+     * @param string[] $depends
+     * @return self
+     */
     public function withDepends(array $depends): self
     {
         $clone = clone $this;

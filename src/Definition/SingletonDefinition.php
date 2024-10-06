@@ -2,6 +2,7 @@
 
 namespace Amp\Injector\Definition;
 
+use Amp\Injector\Arguments;
 use Amp\Injector\Definition;
 use Amp\Injector\Injector;
 use Amp\Injector\Meta\Type;
@@ -10,6 +11,9 @@ use Amp\Injector\ServiceDefinition;
 
 final class SingletonDefinition implements Definition, ServiceDefinition
 {
+    /**
+     * @var \WeakMap<Injector, Provider>
+     */
     private \WeakMap $instances;
     private Definition $definition;
 
@@ -37,5 +41,22 @@ final class SingletonDefinition implements Definition, ServiceDefinition
             $this->definition->build($injector),
             $this->mustStart
         );
+    }
+
+    public function hasArguments(): bool
+    {
+        return $this->definition->hasArguments();
+    }
+
+    public function prependArguments(Arguments $arguments): self
+    {
+        $this->definition->prependArguments($arguments);
+        return $this;
+    }
+
+    public function appendArguments(Arguments $arguments): self
+    {
+        $this->definition->appendArguments($arguments);
+        return $this;
     }
 }

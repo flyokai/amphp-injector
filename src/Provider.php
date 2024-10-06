@@ -19,7 +19,7 @@ interface Provider
     public function unwrap(): ?Provider;
 
     /**
-     * @return array An array of providers which should be initialized first.
+     * @return Providers|array<Provider>
      */
     public function getDependencies(): array|Providers;
 }

@@ -17,6 +17,9 @@ final class ContextProvider implements Provider
         return null;
     }
 
+    /**
+     * @return Provider[]
+     */
     public function getDependencies(): array
     {
         return [];

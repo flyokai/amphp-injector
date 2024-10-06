@@ -5,12 +5,14 @@ namespace Amp\Injector\Composition;
 use Traversable;
 
 /**
- * @template T
+ * @template TKey
+ * @template-covariant TValue
+ * @extends \IteratorAggregate<TKey, TValue>
  */
 interface Composition extends \IteratorAggregate
 {
     /**
-     * @return Traversable<T>
+     * @return Traversable<TKey, TValue>
      */
     public function getIterator(): Traversable;
     public static function selfFactory(): \Closure;

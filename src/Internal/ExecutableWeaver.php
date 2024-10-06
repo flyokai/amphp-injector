@@ -7,6 +7,7 @@ use Amp\Injector\InjectionException;
 use Amp\Injector\Injector;
 use Amp\Injector\Meta\Argument;
 use Amp\Injector\Meta\Executable;
+use Amp\Injector\Meta\Parameter;
 use Amp\Injector\Provider;
 use Amp\Injector\Provider\CompositionProvider;
 use Amp\Injector\Provider\InjectableFactoryProvider;
@@ -18,6 +19,10 @@ use function Amp\Injector\value;
 final class ExecutableWeaver
 {
     /**
+     * @param Executable $executable
+     * @param Arguments $arguments
+     * @param Injector $injector
+     * @return Provider
      * @throws InjectionException
      */
     public static function build(Executable $executable, Arguments $arguments, Injector $injector): Provider
@@ -29,6 +34,11 @@ final class ExecutableWeaver
     }
 
     /**
+     * @param Executable $executable
+     * @param Parameter[] $parameters
+     * @param Arguments $arguments
+     * @param Injector $injector
+     * @return Provider
      * @throws InjectionException
      */
     public static function buildCallback(
@@ -41,6 +51,13 @@ final class ExecutableWeaver
         );
     }
 
+    /**
+     * @param Executable $executable
+     * @param Providers $providers
+     * @param Arguments $arguments
+     * @param Injector $injector
+     * @return Provider
+     */
     public static function buildComposition(
         Executable $executable, Providers $providers, Arguments $arguments, Injector $injector
     ): Provider
@@ -53,15 +70,15 @@ final class ExecutableWeaver
 
     /**
      * @param Executable $executable
-     * @param array $parameters
+     * @param Parameter[] $parameters
      * @param Arguments $arguments
      * @param Injector $injector
+     * @param bool $silent
      * @return Argument[]
-     *
      * @throws InjectionException
      */
     private static function buildArguments(
-        Executable $executable, array $parameters, Arguments $arguments, Injector $injector, $silent=false
+        Executable $executable, array $parameters, Arguments $arguments, Injector $injector, bool $silent=false
     ): array
     {
         $count = \count($parameters);
@@ -88,7 +105,7 @@ final class ExecutableWeaver
 
             if (!$silent) {
                 $definition ??= throw new InjectionException(
-                    'Could not find a suitable definition for ' . $parameter
+                    'Could not find a suitable definition for ' . $parameter->getName()
                 );
             } elseif (!$definition) {
                 continue;

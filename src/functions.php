@@ -46,11 +46,19 @@ function arguments(Weaver ...$weavers): Arguments
     return $arguments;
 }
 
-function singleton(Definition $definition, $onStart=false): SingletonDefinition
+function singleton(Definition $definition, bool $mustStart=false): SingletonDefinition
 {
-    return new SingletonDefinition($definition, $onStart);
+    return new SingletonDefinition($definition, $mustStart);
 }
 
+/**
+ * @param \Closure $factory
+ * @param class-string $class
+ * @param Arguments|null $arguments
+ * @return InjectableFactoryDefinition
+ * @throws InjectionException
+ * @throws \ReflectionException
+ */
 function injectableFactory(\Closure $factory, string $class, ?Arguments $arguments = null): InjectableFactoryDefinition
 {
     $executable = new ReflectionFunctionExecutable(new \ReflectionFunction($factory));
@@ -72,6 +80,13 @@ function compositionFactory(
     return new CompositionDefinition($executable, $definitions, $arguments);
 }
 
+/**
+ * @param class-string $class
+ * @param Definitions|null $definitions
+ * @param Arguments|null $arguments
+ * @return CompositionDefinition
+ * @throws InjectionException
+ */
 function compositeObject(
     string $class,
     ?Definitions $definitions = null,
@@ -84,6 +99,15 @@ function compositeObject(
     return new CompositionDefinition($executable, $definitions, $arguments);
 }
 
+/**
+ * @param Definition $definition
+ * @param string[] $before
+ * @param string[] $after
+ * @param string[] $depends
+ * @param Arguments|null $arguments
+ * @param mixed ...$args
+ * @return FactoryDefinition
+ */
 function compositionItem(
     Definition $definition,
     array $before = [],
@@ -119,6 +143,12 @@ function factory(\Closure $factory, ?Arguments $arguments = null): FactoryDefini
     return new FactoryDefinition($executable, $arguments);
 }
 
+/**
+ * @param class-string $class
+ * @param Arguments|null $arguments
+ * @return FactoryDefinition
+ * @throws InjectionException
+ */
 function object(string $class, ?Arguments $arguments = null): FactoryDefinition
 {
     $executable = new ReflectionConstructorExecutable($class);
@@ -152,6 +182,10 @@ function runtimeTypes(
     return new RuntimeTypeWeaver($definitions, $aliasResolver);
 }
 
+/**
+ * @param Definition[] $definitions
+ * @return NameWeaver
+ */
 function names(array $definitions = []): NameWeaver
 {
     $names = new NameWeaver;

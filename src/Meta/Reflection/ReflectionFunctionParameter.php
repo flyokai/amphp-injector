@@ -4,6 +4,7 @@ namespace Amp\Injector\Meta\Reflection;
 
 use Amp\Injector\Meta\Executable;
 use Amp\Injector\Meta\Parameter;
+use Amp\Injector\Meta\ParameterAttribute;
 use Amp\Injector\Meta\Type;
 
 final class ReflectionFunctionParameter implements Parameter
@@ -27,7 +28,7 @@ final class ReflectionFunctionParameter implements Parameter
         return $this->reflection->isVariadic();
     }
 
-    public function hasAttribute(string $attribute, $flags = 0): bool
+    public function hasAttribute(string $attribute, int $flags = 0): bool
     {
         return !empty($this->reflection->getAttributes($attribute, $flags));
     }
@@ -61,7 +62,7 @@ final class ReflectionFunctionParameter implements Parameter
         return $this->executable->getDeclaringClass();
     }
 
-    public function getAttribute(string $attribute, $flags = 0): ?object
+    public function getAttribute(string $attribute, int $flags = 0): ?ParameterAttribute
     {
         $attributes = $this->reflection->getAttributes($attribute, $flags);
         if (isset($attributes[0])) {

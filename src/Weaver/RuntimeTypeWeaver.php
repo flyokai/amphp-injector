@@ -21,16 +21,13 @@ use function Amp\Injector\proxy;
 
 class RuntimeTypeWeaver implements Weaver
 {
-    private Reflector $reflector;
-
-    /** @var callable(string): string|null */
+    /** @var \Closure(string): (string|null) $alias */
     private \Closure $alias;
 
     public function __construct(
         private Definitions $runtimeDefinitions = new Definitions(),
         private AliasResolver $aliasResolver = new AliasResolverImpl()
     ) {
-        $this->reflector = getDefaultReflector();
         $this->alias = $this->aliasResolver->alias(...);
     }
 
@@ -76,15 +73,18 @@ class RuntimeTypeWeaver implements Weaver
             if ($injectorAttribute instanceof ParameterAttribute\ProxyParameter) {
                 // TODO: find 8.1 compatible proxy manager 3rd-party
                 throw new InjectionException('Proxy not supported yet');
-                $this->processParameterAttribute($injectorAttribute, $injectorAttribute->class, $key);
-                return $this->runtimeDefinitions->get($key);
+                /*$this->processParameterAttribute($injectorAttribute, $injectorAttribute->class, $key);
+                return $this->runtimeDefinitions->get($key);*/
             }
             foreach ($type->getTypes() as $type) {
+                /** @var class-string $type */
                 $type = $this->resolveType($type);
                 $typeReflection = null;
                 try {
                     $typeReflection = new ReflectionClass($type);
+                    // @phpstan-ignore-next-line
                 } catch (\ReflectionException) {}
+                // @phpstan-ignore-next-line
                 if ($typeReflection && $typeReflection->isInstantiable()) {
                     $this->processParameterAttribute($injectorAttribute, $type, $key);
                     if ($this->runtimeDefinitions->get($key)) {
@@ -99,21 +99,26 @@ class RuntimeTypeWeaver implements Weaver
 
     private function resolveType(string $type): string
     {
-        $type = normalizeClass($type);
+        $type = (string)normalizeClass($type);
         return ($this->alias)($type) ?? $type;
     }
 
-    protected function factoryId($class)
+    protected function factoryId(string $class): string
     {
         return $this->resolveType($class).'\0factory';
     }
 
-    protected function proxyId($class)
+    protected function proxyId(string $class): string
     {
         return $this->resolveType($class).'\0proxy';
     }
 
-    protected function processFactoryParameter($parameterAttribute, $key): void
+    /**
+     * @param ParameterAttribute $parameterAttribute
+     * @param string $key
+     * @return void
+     */
+    protected function processFactoryParameter(ParameterAttribute $parameterAttribute, string $key): void
     {
         if (!$this->runtimeDefinitions->get($key)) {
             if ($parameterAttribute instanceof ParameterAttribute\FactoryParameter) {
@@ -128,7 +133,15 @@ class RuntimeTypeWeaver implements Weaver
         }
     }
 
-    protected function processParameterAttribute($parameterAttribute, $targetClass, $key): void
+    /**
+     * @param ParameterAttribute $parameterAttribute
+     * @param class-string $targetClass
+     * @param string $key
+     * @return void
+     */
+    protected function processParameterAttribute(
+        ParameterAttribute $parameterAttribute, string $targetClass, string $key
+    ): void
     {
         if (!$this->runtimeDefinitions->get($key)) {
             if ($parameterAttribute instanceof ParameterAttribute\Service) {

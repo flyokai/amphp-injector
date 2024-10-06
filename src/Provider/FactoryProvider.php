@@ -11,6 +11,9 @@ use Amp\Injector\ProviderContext;
 final class FactoryProvider implements Provider
 {
     private Executable $executable;
+    /**
+     * @var Argument[]
+     */
     private array $arguments;
 
     public function __construct(Executable $executable, Argument ...$arguments)
@@ -47,6 +50,9 @@ final class FactoryProvider implements Provider
         return null;
     }
 
+    /**
+     * @return Provider[]
+     */
     public function getDependencies(): array
     {
         return array_map(fn($arg) => $arg->getProvider(), $this->arguments);

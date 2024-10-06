@@ -34,4 +34,21 @@ final class FactoryDefinition implements Definition
     {
         return $injector->getExecutableProvider($this->executable, $this->arguments);
     }
+
+    public function hasArguments(): bool
+    {
+        return true;
+    }
+
+    public function prependArguments(Arguments $arguments): self
+    {
+        $this->arguments = $arguments->merge($this->arguments);
+        return $this;
+    }
+
+    public function appendArguments(Arguments $arguments): self
+    {
+        $this->arguments = $this->arguments->merge($arguments);
+        return $this;
+    }
 }

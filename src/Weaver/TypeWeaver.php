@@ -25,6 +25,12 @@ final class TypeWeaver implements Weaver
         $this->reflector = getDefaultReflector();
     }
 
+    /**
+     * @param class-string $class
+     * @param Definition $definition
+     * @return self
+     * @throws \ReflectionException
+     */
     public function with(string $class, Definition $definition): self
     {
         $clone = clone $this;

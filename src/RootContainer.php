@@ -9,12 +9,12 @@ final class RootContainer implements Container
     /** @var Provider[] */
     private array $providers = [];
 
-    /** @var callable(string): string */
+    /** @var \Closure(string): (string|null) */
     private \Closure $alias;
 
     public function __construct()
     {
-        $this->alias = fn($a) => null;
+        $this->alias = fn(string $a) => null;
     }
 
     public function with(string $id, Provider $provider): self
@@ -29,8 +29,8 @@ final class RootContainer implements Container
     }
 
     /**
-     * @param callable(string): string|null $alias
-     * @return $this
+     * @param \Closure(string): (string|null) $alias
+     * @return self
      */
     public function withAlias(\Closure $alias): self
     {
@@ -66,7 +66,7 @@ final class RootContainer implements Container
         if (false !== ($__id = normalizeClass($id, false))) {
             $id = $__id;
         }
-        return $id;
+        return (string)$id;
     }
 
     public function alias(string $id): ?string

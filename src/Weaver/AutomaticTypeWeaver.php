@@ -21,7 +21,7 @@ final class AutomaticTypeWeaver implements Weaver
     /** @var Definition[][] */
     private array $definitions = [];
 
-    /** @var callable(string): string|null */
+    /** @var \Closure(string): (string|null) */
     private \Closure $alias;
 
     public function __construct(
@@ -48,7 +48,7 @@ final class AutomaticTypeWeaver implements Weaver
 
     private function resolveType(string $type): string
     {
-        $type = normalizeClass($type);
+        $type = (string)normalizeClass($type);
         return ($this->alias)($type) ?? $type;
     }
 

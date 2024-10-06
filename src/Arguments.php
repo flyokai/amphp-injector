@@ -16,7 +16,15 @@ final class Arguments implements Weaver, NameWise
     {
         $clone = clone $this;
         $clone->weavers[] = $weaver;
+        return $clone;
+    }
 
+    public function merge(Arguments $arguments): self
+    {
+        $clone = clone $this;
+        foreach ($arguments->weavers as $weaver) {
+            $clone->weavers[] = $weaver;
+        }
         return $clone;
     }
 
@@ -34,6 +42,9 @@ final class Arguments implements Weaver, NameWise
         return null;
     }
 
+    /**
+     * @return Definition[]
+     */
     public function getNames(): array
     {
         $names = [];

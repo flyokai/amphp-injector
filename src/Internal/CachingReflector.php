@@ -7,12 +7,33 @@ final class CachingReflector implements Reflector
 {
     private Reflector $reflector;
 
+    /**
+     * @var \ReflectionClass[]
+     */
     private array $classes = [];
+    /**
+     * @var (\ReflectionMethod|null)[]
+     */
     private array $constructors = [];
+    /**
+     * @var (\ReflectionParameter[]|null)[]
+     */
     private array $constructorParameters = [];
+    /**
+     * @var \ReflectionMethod[]
+     */
     private array $methods = [];
+    /**
+     * @var \ReflectionFunction[]
+     */
     private array $functions = [];
+    /**
+     * @var (string|null)[]
+     */
     private array $parameters = [];
+    /**
+     * @var (string[])[]
+     */
     private array $parents = [];
 
     public function __construct(?Reflector $reflector = null)
@@ -51,7 +72,7 @@ final class CachingReflector implements Reflector
             $lowFunc = normalizeClass($function->name);
             $key = "{$lowFunc}::{$param->name}";
 
-            if (\str_contains($lowFunc, '{closure}')) {
+            if (\str_contains((string)$lowFunc, '{closure}')) {
                 return $this->reflector->getParameterType($function, $param);
             }
         }

@@ -19,6 +19,9 @@ final class ValueProvider implements Provider
         return $this->value;
     }
 
+    /**
+     * @return Provider[]
+     */
     public function getDependencies(): array
     {
         return [];

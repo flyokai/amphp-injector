@@ -4,9 +4,12 @@ namespace Amp\Injector;
 
 class WeakRefContainer implements Container
 {
+    /**
+     * @var \WeakReference<Container>|null
+     */
     protected ?\WeakReference $subject=null;
 
-    public function assertSubject()
+    protected function resolveSubject(): Container
     {
         if ($this->subject === null) {
             throw new \RuntimeException('Subject container is not set.');
@@ -14,6 +17,7 @@ class WeakRefContainer implements Container
         if (!$this->subject->get()) {
             throw new \RuntimeException('Subject container no longer exist');
         }
+        return $this->subject->get();
     }
 
     public function setSubject(Container $container): self
@@ -24,28 +28,39 @@ class WeakRefContainer implements Container
 
     public function alias(string $id): ?string
     {
-        $this->assertSubject();
-        return $this->subject->get()->alias($id);
+        return $this->resolveSubject()->alias($id);
     }
 
     public function get(string $id): mixed
     {
-        return $this->subject->get()->get($id);
+        return $this->resolveSubject()->get($id);
     }
 
     public function has(string $id): bool
     {
-        return $this->subject->get()->has($id);
+        $subject = $this->resolveSubject();
+        return $this->resolveSubject()->has($id);
     }
 
     public function getIterator(): \Traversable
     {
-        return $this->subject->get()->getIterator();
+        return $this->resolveSubject()->getIterator();
     }
 
     public function getProvider(string $id): Provider
     {
-        return $this->subject->get()->getProvider($id);
+        return $this->resolveSubject()->getProvider($id);
     }
+
+    public function with(string $id, Provider $provider): Container
+    {
+        return $this->resolveSubject()->with($id, $provider);
+    }
+
+    public function withAlias(\Closure $alias): Container
+    {
+        return $this->resolveSubject()->withAlias($alias);
+    }
+
 
 }

@@ -6,6 +6,9 @@ use function Amp\Injector\Internal\normalizeClass;
 
 final class Type
 {
+    /**
+     * @var string[]
+     */
     private array $types;
 
     public function __construct(string ...$types)
@@ -23,6 +26,7 @@ final class Type
 
         if ($reflectionType instanceof \ReflectionUnionType) {
             foreach ($reflectionType->getTypes() as $type) {
+                // @phpstan-ignore-next-line
                 $types[normalizeClass($type->getName())] = $type->getName();
 
                 if ($type->allowsNull()) {
@@ -42,6 +46,9 @@ final class Type
         return new self(...\array_values($types));
     }
 
+    /**
+     * @return string[]
+     */
     public function getTypes(): array
     {
         return $this->types;

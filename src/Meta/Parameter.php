@@ -12,9 +12,14 @@ interface Parameter
 
     public function getType(): ?Type;
 
-    public function hasAttribute(string $attribute, $flags = 0): bool;
+    public function hasAttribute(string $attribute, int $flags = 0): bool;
 
-    public function getAttribute(string $attribute, $flags = 0): ?object;
+    /**
+     * @param class-string<ParameterAttribute> $attribute
+     * @param $flags
+     * @return ParameterAttribute|null
+     */
+    public function getAttribute(string $attribute, int $flags = 0): ?ParameterAttribute;
 
     public function getDefaultValue(): mixed;
 

@@ -8,6 +8,9 @@ use Amp\Injector\Weaver;
 
 final class AnyWeaver implements Weaver, NameWise
 {
+    /**
+     * @var Weaver[]
+     */
     private array $weavers;
 
     public function __construct(Weaver ...$weavers)

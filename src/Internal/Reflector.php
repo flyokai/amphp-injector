@@ -29,6 +29,7 @@ interface Reflector extends ParentReflector
      * @param class-string $className
      *
      * @return \ReflectionParameter[]|null
+     * @throws \ReflectionException
      */
     public function getConstructorParameters(string $className): ?array;
 

@@ -40,7 +40,7 @@ final class Application implements Lifecycle
     /**
      * @throws InjectionException
      */
-    public function invoke(Definition $definition)
+    public function invoke(Definition $definition): mixed
     {
         return $definition->build($this->injector)->get(new ProviderContext);
     }

@@ -8,6 +8,9 @@ use Amp\Injector\Weaver;
 
 final class NameWeaver implements Weaver, NameWise
 {
+    /**
+     * @var array<int|string, Definition>
+     */
     private array $names = [];
 
     public function with(int|string $name, Definition $definition): self
@@ -24,6 +27,9 @@ final class NameWeaver implements Weaver, NameWise
         return $this->names[$name] ?? null;
     }
 
+    /**
+     * @return Definition[]
+     */
     public function getNames(): array
     {
         return $this->names;

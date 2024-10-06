@@ -2,6 +2,9 @@
 
 namespace Amp\Injector;
 
+/**
+ * @implements \IteratorAggregate<string, Provider>
+ */
 final class Providers implements \IteratorAggregate
 {
     private static int $nextId = 0;
@@ -28,7 +31,7 @@ final class Providers implements \IteratorAggregate
     }
 
     /**
-     * @return iterable<Provider>
+     * @return \Generator<string, Provider>
      */
     public function getIterator(): \Generator
     {

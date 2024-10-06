@@ -22,7 +22,7 @@ final class ReflectionFunctionExecutable implements Executable
         }
     }
 
-    private function setMethodCallable(\ReflectionMethod $method, $invocationObject): void
+    private function setMethodCallable(\ReflectionMethod $method, ?object $invocationObject = null): void
     {
         if (\is_object($invocationObject)) {
             $this->callable = $method;
@@ -48,7 +48,7 @@ final class ReflectionFunctionExecutable implements Executable
         return $parameters;
     }
 
-    public function __invoke(...$args): mixed
+    public function __invoke(mixed ...$args): mixed
     {
         if ($this->isInstanceMethod) {
             return $this->callable->invokeArgs($this->invocationObject, $args);
@@ -59,6 +59,10 @@ final class ReflectionFunctionExecutable implements Executable
             : $this->callable->invokeArgs($args);
     }
 
+    /**
+     * @param mixed[] $args
+     * @return mixed
+     */
     private function invokeClosureCompat(array $args): mixed
     {
         $scope = $this->callable->getClosureScopeClass();

@@ -10,6 +10,12 @@ interface Definition
 
     public function getAttribute(string $attribute): ?object;
 
+    public function hasArguments(): bool;
+
+    public function prependArguments(Arguments $arguments): self;
+
+    public function appendArguments(Arguments $arguments): self;
+
     /**
      * @throws InjectionException
      */

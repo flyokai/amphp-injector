@@ -6,6 +6,9 @@ use Amp\Injector\Meta\Parameter;
 
 final class ProviderContext
 {
+    /**
+     * @var Parameter[]
+     */
     private array $parameters = [];
 
     public function withParameter(Parameter $parameter): self

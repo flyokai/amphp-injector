@@ -2,10 +2,12 @@
 
 namespace Amp\Injector\Internal;
 
-/** @internal */
+/**
+ * @internal
+ */
 final class StandardReflector implements Reflector
 {
-    public function getConstructorParameters($className): ?array
+    public function getConstructorParameters(string $className): ?array
     {
         return ($reflectedCtor = $this->getConstructor($className))
             ? $reflectedCtor->getParameters()
@@ -53,6 +55,7 @@ final class StandardReflector implements Reflector
     public function getParents(string $class): array
     {
         // TODO: Other types
+        // @phpstan-ignore-next-line
         if (\in_array($class, ['bool', 'int', 'null'], true)) {
             return [];
         }
@@ -73,6 +76,8 @@ final class StandardReflector implements Reflector
     }
 
     /**
+     * @param class-string $className
+     * @return \ReflectionClass
      * @throws \ReflectionException
      */
     public function getClass(string $className): \ReflectionClass

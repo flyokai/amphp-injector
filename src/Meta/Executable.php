@@ -15,7 +15,7 @@ interface Executable
 
     public function getDeclaringClass(): ?string;
 
-    public function __invoke(...$args): mixed;
+    public function __invoke(mixed ...$args): mixed;
 
     public function __toString(): string;
 }

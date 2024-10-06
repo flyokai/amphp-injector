@@ -25,7 +25,13 @@ final class SingletonProvider implements Provider, Lifecycle
 
     private int $status = self::STATUS_NONE;
 
+    /**
+     * @var callable[]
+     */
     private array $onStart = [];
+    /**
+     * @var callable[]
+     */
     private array $onStop = [];
 
     private bool $started = false;
@@ -62,6 +68,9 @@ final class SingletonProvider implements Provider, Lifecycle
         return $this->provider;
     }
 
+    /**
+     * @return Provider[]
+     */
     public function getDependencies(): array
     {
         return [];

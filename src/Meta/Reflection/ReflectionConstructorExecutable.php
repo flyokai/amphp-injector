@@ -4,6 +4,7 @@ namespace Amp\Injector\Meta\Reflection;
 
 use Amp\Injector\InjectionException;
 use Amp\Injector\Meta\Executable;
+use Amp\Injector\Meta\Parameter;
 use Amp\Injector\Meta\Type;
 use function Amp\Injector\Internal\getDefaultReflector;
 
@@ -13,6 +14,7 @@ final class ReflectionConstructorExecutable implements Executable
     private ?\ReflectionMethod $constructor;
 
     /**
+     * @param class-string $class
      * @throws InjectionException
      */
     public function __construct(string $class)
@@ -37,6 +39,9 @@ final class ReflectionConstructorExecutable implements Executable
         }
     }
 
+    /**
+     * @return Parameter[]
+     */
     public function getParameters(): array
     {
         $parameters = [];
@@ -57,7 +62,7 @@ final class ReflectionConstructorExecutable implements Executable
 
     public function getAttribute(string $attribute): ?object
     {
-        $attributes = $this->constructor->getAttributes($attribute);
+        $attributes = $this->constructor ? $this->constructor->getAttributes($attribute): [];
         if (isset($attributes[0])) {
             return $attributes[0]->newInstance();
         }
@@ -71,7 +76,7 @@ final class ReflectionConstructorExecutable implements Executable
         return $this->class;
     }
 
-    public function __invoke(...$args): mixed
+    public function __invoke(mixed ...$args): mixed
     {
         return new $this->class(...$args);
     }

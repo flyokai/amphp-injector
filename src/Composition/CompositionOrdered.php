@@ -3,14 +3,16 @@
 namespace Amp\Injector\Composition;
 
 use ArrayIterator;
+use MJS\TopSort\CircularDependencyException;
+use MJS\TopSort\ElementNotFoundException;
 use MJS\TopSort\Implementations\StringSort;
 
 class CompositionOrdered extends CompositionImpl
 {
     /**
-     * @param object<string, CompositionItem>|array<string, CompositionItem> $array
+     * @param object|array<string, CompositionItem> $array
      * @param int $flags
-     * @param string $iteratorClass
+     * @param class-string<ArrayIterator<int|string, mixed>> $iteratorClass
      */
     public function __construct(
         object|array $array = [], int $flags = 0, string $iteratorClass = "ArrayIterator", ?\Closure $sorter=null
@@ -26,6 +28,12 @@ class CompositionOrdered extends CompositionImpl
         parent::__construct($sorted, $flags, $iteratorClass);
     }
 
+    /**
+     * @param int $flags
+     * @param class-string<ArrayIterator<int|string, mixed>> $iteratorClass
+     * @param \Closure|null $sorter
+     * @return \Closure(mixed ...$args): Composition<int|string, mixed>
+     */
     public static function selfFactory(
         int $flags = 0, string $iteratorClass = ArrayIterator::class, ?\Closure $sorter=null
     ): \Closure
@@ -37,6 +45,7 @@ class CompositionOrdered extends CompositionImpl
         $key = sprintf('%d-%d-%s-%s', spl_object_id($sorter), $flags, $iteratorClass, static::class);
         if (!isset($cache[$key])) {
             $cache[$key] = static function (...$args) use ($sorter, $flags, $iteratorClass) {
+                // @phpstan-ignore-next-line
                 return new static($args, $flags, $iteratorClass, $sorter);
             };
             $cache[$key] = $cache[$key]->bindTo(null, static::class);
@@ -44,12 +53,21 @@ class CompositionOrdered extends CompositionImpl
         return $cache[$key];
     }
 
-    public static function defaultSorter()
+    /**
+     * @return \Closure(array<string, CompositionItem>): (CompositionItem[])
+     */
+    public static function defaultSorter(): \Closure
     {
         static $defaultSorter;
         return $defaultSorter ??= self::topSort(...);
     }
 
+    /**
+     * @param array<string, CompositionItem> $array
+     * @return CompositionItem[]
+     * @throws CircularDependencyException
+     * @throws ElementNotFoundException
+     */
     public static function topSort(array $array): array
     {
         foreach ($array as $name => $item) {

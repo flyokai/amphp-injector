@@ -14,8 +14,11 @@ class AliasResolverImpl implements AliasResolver
     public function with(string $alias, string $name): self
     {
         $clone = clone $this;
-        $alias = normalizeClass($alias);
+        if (false !== ($__alias = normalizeClass($alias, false))) {
+            $alias = $__alias;
+        }
         $name = normalizeClass($name);
+        // @phpstan-ignore-next-line
         $clone->alias[$alias] = $name;
         return $clone;
     }

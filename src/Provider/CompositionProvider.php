@@ -35,6 +35,9 @@ final class CompositionProvider implements Provider
         return null;
     }
 
+    /**
+     * @return Providers|array<Provider>
+     */
     public function getDependencies(): array|Providers
     {
         return $this->providers;
