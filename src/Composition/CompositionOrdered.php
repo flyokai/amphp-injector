@@ -93,7 +93,7 @@ class CompositionOrdered extends CompositionImpl
         foreach ($array as $name => $item) {
             $sort->add($name, $item->depends());
         }
-        $sortedNames = $sort->sort();
+        $sortedNames = array_filter($sort->sort());
         $sorted = [];
         foreach ($sortedNames as $name) {
             $sorted[] = $array[$name];
