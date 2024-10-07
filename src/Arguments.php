@@ -50,7 +50,7 @@ final class Arguments implements Weaver, NameWise
         $names = [];
         foreach ($this->weavers as $weaver) {
             if ($weaver instanceof NameWeaver) {
-                $names = array_merge($names, $weaver->getNames());
+                $names += $weaver->getNames();
             }
         }
         return $names;
