@@ -32,7 +32,7 @@ final class FactoryProvider implements Provider
                 if ($parameter->isVariadic()) {
                     $args[$argument->getName()] = $argument->getProvider()->get($context->withParameter($parameter));
                 } else {
-                    $args[] = $argument->getProvider()->get($context->withParameter($parameter));
+                    $args[$argument->getPosition()] = $argument->getProvider()->get($context->withParameter($parameter));
                 }
             }
 

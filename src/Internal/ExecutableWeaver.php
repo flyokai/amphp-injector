@@ -85,6 +85,7 @@ final class ExecutableWeaver
         $variadic = null;
         $usedNames = $args = [];
 
+        $lastIndex = 0;
         for ($index = 0; $index < $count; $index++) {
             $parameter = $parameters[$index];
 
@@ -113,7 +114,8 @@ final class ExecutableWeaver
 
             $usedNames[] = $parameter->getName();
 
-            $args[$index] = new Argument($parameter, $definition->build($injector));
+            $args[$index] = new Argument($parameter, $definition->build($injector), $index);
+            $lastIndex = $index;
         }
 
         if ($variadic) {
@@ -121,7 +123,7 @@ final class ExecutableWeaver
             foreach ($names as $name => $definition) {
                 if (!in_array($name, $usedNames)) {
                     $name = is_int($name) ? $name+$index : $name;
-                    $args[$name] = new Argument($variadic, $definition->build($injector), $name);
+                    $args[$name] = new Argument($variadic, $definition->build($injector), ++$lastIndex, $name);
                 }
             }
         }

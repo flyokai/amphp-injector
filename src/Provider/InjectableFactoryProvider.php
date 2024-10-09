@@ -28,15 +28,16 @@ final class InjectableFactoryProvider implements Provider
         foreach ($this->arguments as $index=>$argument) {
             $__name = $argument->getParameter()->getName();
             $__arg = $argument->getProvider()->get($context->withParameter($argument->getParameter()));
-            $__args[$index] = $__arg;
+            $__args[$argument->getPosition()] = $__arg;
             $__named[$__name] = $__arg;
         }
         $__exec = $this->executable;
         return static function (...$args) use ($__named, $__args, $__exec) {
             if (is_numeric(key($args))) {
-                $args = array_replace_recursive($__args, $args);
+                $args += $__args;
+                ksort($args);
             } else {
-                $args = array_replace_recursive($__named, $args);
+                $args = array_merge($__named, $args);
             }
             return ($__exec)(...$args);
         };
