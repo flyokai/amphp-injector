@@ -17,7 +17,7 @@ class AliasResolverImpl implements AliasResolver
         if (false !== ($__alias = normalizeClass($alias, false))) {
             $alias = $__alias;
         }
-        $name = normalizeClass($name);
+        normalizeClass($name);
         // @phpstan-ignore-next-line
         $clone->alias[$alias] = $name;
         return $clone;

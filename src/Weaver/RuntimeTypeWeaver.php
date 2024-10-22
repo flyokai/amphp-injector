@@ -83,7 +83,7 @@ class RuntimeTypeWeaver implements Weaver
                 try {
                     $typeReflection = new ReflectionClass($type);
                     // @phpstan-ignore-next-line
-                } catch (\ReflectionException) {}
+                } catch (\ReflectionException $e) {}
                 // @phpstan-ignore-next-line
                 if ($typeReflection && $typeReflection->isInstantiable()) {
                     $this->processParameterAttribute($injectorAttribute, $type, $key);
@@ -99,7 +99,6 @@ class RuntimeTypeWeaver implements Weaver
 
     private function resolveType(string $type): string
     {
-        $type = (string)normalizeClass($type);
         return ($this->alias)($type) ?? $type;
     }
 

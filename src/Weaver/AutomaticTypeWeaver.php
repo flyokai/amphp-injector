@@ -35,11 +35,13 @@ final class AutomaticTypeWeaver implements Weaver
             if ($type = $definition->getType()) {
                 foreach ($type->getTypes() as $type) {
                     $resolvedType = $this->resolveType($type);
-                    $this->definitions[$resolvedType][$id] = $definition;
+                    $key = normalizeClass($resolvedType);
+                    $this->definitions[$key][$id] = $definition;
 
                     foreach ($this->reflector->getParents($type) as $parent) {
                         $resolvedParent = $this->resolveType($parent);
-                        $this->definitions[$resolvedParent][$id] = $definition;
+                        $key = normalizeClass($resolvedParent);
+                        $this->definitions[$key][$id] = $definition;
                     }
                 }
             }
@@ -48,7 +50,6 @@ final class AutomaticTypeWeaver implements Weaver
 
     private function resolveType(string $type): string
     {
-        $type = (string)normalizeClass($type);
         return ($this->alias)($type) ?? $type;
     }
 
