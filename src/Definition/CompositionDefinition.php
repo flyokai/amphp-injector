@@ -49,9 +49,13 @@ final class CompositionDefinition implements Definition
 
     public function build(Injector $injector): Provider
     {
+        $processed = [];
         $providers = new Providers();
         foreach ($this->definitions as $id=>$definition) {
+            $__id = strtolower($id);
+            if (array_key_exists($__id, $processed)) continue;
             $providers = $providers->with($definition->build($injector), $id);
+            $processed[$__id] = true;
         }
         return $injector->getCompositionProvider($this->executable, $providers, $this->arguments);
     }

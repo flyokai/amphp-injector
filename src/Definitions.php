@@ -18,10 +18,10 @@ final class Definitions implements \IteratorAggregate
     {
         $clone = clone $this;
         $id ??= $clone->generateId($definition);
-        if (false !== ($__id = normalizeClass($id, false))) {
-            $id = $__id;
-        }
         $clone->definitions[$id] = $definition;
+        if (false !== ($__id = normalizeClass($id, false))) {
+            $clone->definitions[$__id] = $definition;
+        }
 
         return $clone;
     }
