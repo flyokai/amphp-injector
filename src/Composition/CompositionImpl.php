@@ -7,6 +7,8 @@ use ArrayIterator;
 /**
  * @implements Composition<string|int, mixed>
  * @extends \ArrayObject<string|int, mixed>
+ *
+ * @method \Iterator getIterator()
  */
 class CompositionImpl extends \ArrayObject implements Composition
 {

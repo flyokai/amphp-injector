@@ -9,6 +9,9 @@ use MJS\TopSort\Implementations\StringSort;
 
 class CompositionOrdered extends CompositionImpl
 {
+    const FLAG_KEEP_KEYS = 2**10;
+    protected int $origFlags = 0;
+    protected array $sortedCompositionItems = [];
     /**
      * @param object|array<string, CompositionItem> $array
      * @param int $flags
@@ -17,15 +20,43 @@ class CompositionOrdered extends CompositionImpl
     public function __construct(
         object|array $array = [], int $flags = 0, string $iteratorClass = "ArrayIterator", ?\Closure $sorter=null
     ) {
+        $this->origFlags = $flags;
+        $isKeepKeys = self::hasKeepKeysFlag($flags);
         if ($sorter === null) {
             $sorter = self::topSort(...);
         }
-        $sorted = [];
-        $__sorted = $sorter($array);
-        foreach ($__sorted as $item) {
-            $sorted[] = $item instanceof CompositionItem ? $item->value: $item;
+        $this->sortedCompositionItems = $sorted = [];
+        $__sorted = $sorter($array, $flags);
+        foreach ($__sorted as $key=>$item) {
+            if ($isKeepKeys) {
+                if ($item instanceof CompositionItem) {
+                    $sorted[$key] = $item->value;
+                    $this->sortedCompositionItems[$key] = $item;
+                } else {
+                    $sorted[$key] = $item;
+                }
+            } else {
+                if ($item instanceof CompositionItem) {
+                    $sorted[] = $item->value;
+                    $this->sortedCompositionItems[spl_object_id($item->value)] = $item;
+                } else {
+                    $sorted[] = $item;
+                }
+            }
         }
+        $flags = self::removeMyFlags($flags);
         parent::__construct($sorted, $flags, $iteratorClass);
+    }
+
+    public static function removeMyFlags(int $flags=0): int
+    {
+        $flags = $flags & ~self::FLAG_KEEP_KEYS;
+        return $flags;
+    }
+
+    public static function hasKeepKeysFlag(int $flags): bool
+    {
+        return (bool)($flags & self::FLAG_KEEP_KEYS);
     }
 
     /**
@@ -68,8 +99,9 @@ class CompositionOrdered extends CompositionImpl
      * @throws CircularDependencyException
      * @throws ElementNotFoundException
      */
-    public static function topSort(array $array): array
+    public static function topSort(array $array, ?int $flags=null): array
     {
+        $isKeepKeys = self::hasKeepKeysFlag($flags);
         foreach ($array as $name => $item) {
             if (!is_string($name)) {
                 throw new \InvalidArgumentException(sprintf(
@@ -96,7 +128,11 @@ class CompositionOrdered extends CompositionImpl
         $sortedNames = array_filter($sort->sort());
         $sorted = [];
         foreach ($sortedNames as $name) {
-            $sorted[] = $array[$name];
+            if ($isKeepKeys) {
+                $sorted[$name] = $array[$name];
+            } else {
+                $sorted[] = $array[$name];
+            }
         }
         return $sorted;
     }
