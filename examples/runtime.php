@@ -23,6 +23,7 @@ use function Amp\Injector\compositionFactory;
 use function Amp\Injector\compositeObject;
 use function Amp\Injector\definitions;
 use function Amp\Injector\factory;
+use function Amp\Injector\injectableFactory;
 use function Amp\Injector\names;
 use function Amp\Injector\object;
 use function Amp\Injector\runtimeTypes;
@@ -45,13 +46,18 @@ class FooImpl implements Foo
         #[SharedProxy(Baz::class)] protected Baz           $bazProxy,
         #[ServiceProxy(Qux::class)] protected Qux          $quxProxy,*/
         /** @var callable: Bar */
-        #[FactoryParameter(Bar::class)] protected \Closure $barFactory
+        #[FactoryParameter(Bar::class)] protected \Closure $barFactory,
+        protected \Closure $bar2Factory
     )
     {
     }
     public function createBar(...$args): Bar
     {
         return ($this->barFactory)(...$args);
+    }
+    public function createBar2(...$args): Bar
+    {
+        return ($this->bar2Factory)(...$args);
     }
 }
 
@@ -131,6 +137,15 @@ $compositionDefinitions = definitions()
     ->with(singleton(object(BazImpl::class)), 'baz1')
     ->with(singleton(object(BazImpl::class)), 'baz2')
 ;
+
+$fooImplDefinition = object(
+    FooImpl::class,
+    arguments()->with(names()
+        ->with('bar2Factory', injectableFactory(
+            null, BarImpl::class
+        ))
+    )
+);
 $sortedComposDefinitions = definitions()
     ->with(object(
         CompositionItem::class,
@@ -143,7 +158,7 @@ $sortedComposDefinitions = definitions()
         CompositionItem::class,
         arguments()->with(names()
             ->with('before', value(['bar']))
-            ->with('value', object(FooImpl::class))
+            ->with('value', $fooImplDefinition)
         )
     ), 'foo')
     ->with(object(
@@ -163,7 +178,7 @@ $compositionArguments = arguments()
 ;
 
 $definitions = definitions()
-    ->with(object(FooImpl::class), FooImpl::class)
+    ->with($fooImplDefinition, FooImpl::class)
     ->with(object(CompositionContainerImpl::class, $compositionArguments), CompositionContainerImpl::class)
 ;
 
@@ -185,7 +200,7 @@ $application = new Application($injector, $definitions, 'runtime-example', $alia
 /** @var Foo $foo1 */
 #$foo1 = $application->getContainer()->get(Foo::class);
 /** @var Foo $foo2 */
-#$foo2 = $application->getContainer()->get(Foo::class);
+$foo2 = $application->getContainer()->get(Foo::class);
 
 #var_dump($foo1);
 #var_dump($foo2);
@@ -193,9 +208,11 @@ $application = new Application($injector, $definitions, 'runtime-example', $alia
 $compositionContainer1 = $application->getContainer()->get(CompositionContainer::class);
 $compositionContainer2 = $application->getContainer()->get(CompositionContainer::class);
 
-var_dump($compositionContainer1);
-var_dump($compositionContainer2);
+/*var_dump($compositionContainer1);
+var_dump($compositionContainer2);*/
 
 /*var_dump($foo2->createBar(qux: new Qux));
 var_dump($foo2->createBar(baz: new Baz));
 var_dump($foo2->createBar(new Baz, new Qux));*/
+
+var_dump($foo2->createBar2());
