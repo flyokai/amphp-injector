@@ -52,14 +52,16 @@ function singleton(Definition $definition, bool $mustStart=false): SingletonDefi
 }
 
 /**
- * @param \Closure|null $factory
  * @param class-string $class
+ * @param \Closure|null $factory
  * @param Arguments|null $arguments
  * @return InjectableFactoryDefinition
  * @throws InjectionException
  * @throws \ReflectionException
  */
-function injectableFactory(?\Closure $factory, string $class, ?Arguments $arguments = null): InjectableFactoryDefinition
+function injectableFactory(
+    string $class, ?\Closure $factory = null, ?Arguments $arguments = null
+): InjectableFactoryDefinition
 {
     $ctorExecutable = new ReflectionConstructorExecutable($class);
     if ($factory==null) {

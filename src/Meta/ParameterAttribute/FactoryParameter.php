@@ -29,6 +29,6 @@ class FactoryParameter implements Service
         $__cb = static function (mixed ...$args) use ($class) {
             return new $class(...$args);
         };
-        return injectableFactory($__cb, $class, $arguments);
+        return injectableFactory($class, $__cb, $arguments);
     }
 }

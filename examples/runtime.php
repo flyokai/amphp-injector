@@ -141,9 +141,7 @@ $compositionDefinitions = definitions()
 $fooImplDefinition = object(
     FooImpl::class,
     arguments()->with(names()
-        ->with('bar2Factory', injectableFactory(
-            null, BarImpl::class
-        ))
+        ->with('bar2Factory', injectableFactory(BarImpl::class))
     )
 );
 $sortedComposDefinitions = definitions()
