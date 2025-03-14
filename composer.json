@@ -30,7 +30,7 @@
         }
     ],
     "replace": {
-        "amphp/injector": "dev-master"
+        "amphp/injector": "*"
     },
     "autoload": {
         "psr-4": {
