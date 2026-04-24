@@ -1,5 +1,5 @@
 {
-    "name": "wtsergo/amphp-injector",
+    "name": "flyokai/amphp-injector",
     "homepage": "https://github.com/amphp/injector",
     "description": "A dependency injector for bootstrapping object-oriented PHP applications.",
     "keywords": [
