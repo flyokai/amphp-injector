@@ -1,831 +1,330 @@
-# injector
+# flyokai/amphp-injector
 
-A recursive dependency injector to bootstrap and wire together S.O.L.I.D., object-oriented PHP applications.
+> User docs → [`README.md`](README.md) · Agent quick-ref → [`CLAUDE.md`](CLAUDE.md) · Agent deep dive → [`AGENTS.md`](AGENTS.md)
 
-##### How It Works
+> A dependency injection container for PHP 8.1+ with weaver-based parameter resolution, ordered compositions, attribute-driven wiring, and lifecycle management.
 
-Among other things, the injector recursively instantiates class dependencies based on the parameter
-type-hints specified in class constructor signatures. This requires the use of Reflection. You may
-have heard that "reflection is slow". Let's clear something up: *anything* can be "slow" if you're
-doing it wrong. Reflection is an order of magnitude faster than disk access and several orders of
-magnitude faster than retrieving information (for example) from a remote database. Additionally,
-each reflection offers the opportunity to cache the results if you're worried about speed. The injector
-caches any reflections it generates to minimize the potential performance impact.
+`flyokai/amphp-injector` is a substantially-evolved descendant of [`amphp/injector`](https://github.com/amphp/injector). The container is now driven by **weavers** (composable parameter resolvers), built around an immutable **`Application`** that owns a **`Container`** and an **`Injector`**, with first-class support for **`Composition`** collections, **PHP 8 attributes**, **lifecycle** hooks, and **alias resolution**.
 
-> The injector **is NOT** a Service Locator. DO NOT turn it into one by passing the injector into your
-> application classes. Service Locator is an anti-pattern; it hides class dependencies, makes code
-> more difficult to maintain and makes a liar of your API! You should *only* use an injector for
-> wiring together the disparate parts of your application during your bootstrap phase.
+> **Heads up.** Despite the package name and namespace, this is a fork. If you arrived here looking for upstream `amphp/injector`'s `Injector::make()`, `define()`, `share()`, `delegate()` API — that API is gone. Read on for what replaced it.
 
-## The Guide
+## Features
 
-**Basic Usage**
+- **`Application`** — entry point that holds a `Container` and `Injector`, implements `Lifecycle`
+- **Definition helpers** — `singleton()`, `object()`, `value()`, `factory()`, `injectableFactory()`, `compositionFactory()`, `compositionItem()`
+- **Weavers** — `names()`, `types()`, `runtimeTypes()`, `automaticTypes()`, `any()` for parameter resolution
+- **PHP 8 attributes** — `#[ServiceParameter]`, `#[SharedParameter]`, `#[PrivateParameter]`, `#[FactoryParameter(Class)]`
+- **Compositions** — `CompositionOrdered` with topological sort via `before` / `after` / `depends`
+- **Aliases** — one-way interface → implementation via `AliasResolverImpl`
+- **Lifecycle** — `start()` in dependency order, `stop()` in reverse
+- **Lazy proxies** — pluggable via `ProxyDefinition` (see `examples/proxy.php`)
 
-* [Basic Instantiation](#basic-instantiation)
-* [Injection Definitions](#injection-definitions)
-* [Type-Hint Aliasing](#type-hint-aliasing)
-* [Non-Class Parameters](#non-class-parameters)
-* [Global Parameter Definitions](#global-parameter-definitions)
-
-**Advanced Usage**
-
-* [Instance Sharing](#instance-sharing)
-* [Instantiation Delegates](#instantiation-delegates)
-* [Prepares and Setter Injection](#prepares-and-setter-injection)
-* [Injecting for Execution](#injecting-for-execution)
-* [Dependency Resolution](#dependency-resolution)
-
-**Example Use Cases**
-
-* [Avoiding Evil Singletons](#avoiding-evil-singletons)
-* [Application Bootstrapping](#app-bootstrapping)
-
-
-## Requirements and Installation
-
-- Requires PHP 8.0 or higher.
-
-#### Installation
-
-###### Composer
-
-You may also use composer to include the project as a dependency in your projects `composer.json`. The relevant package is `amphp/injector`.
-
-Alternatively require the package using composer cli:
+## Installation
 
 ```bash
-composer require amphp/injector
+composer require flyokai/amphp-injector
 ```
 
-## Basic Usage
+The package's `composer.json` `replace`s `amphp/injector` so the namespace `Amp\Injector\…` resolves to this fork.
 
-To start using the injector, simply create a new instance of the `Amp\Injector\Injector` ("the Injector") class:
-
-```php
-<?php
-$injector = new Amp\Injector\Injector;
-```
-
-### Basic Instantiation
-
-If a class doesn't specify any dependencies in its constructor signature there's little point in
-using the Injector to generate it. However, for the sake of completeness consider that you can do
-the following with equivalent results:
+## Quick start
 
 ```php
-<?php
-$injector = new Amp\Injector\Injector;
-$obj1 = new SomeNamespace\MyClass;
-$obj2 = $injector->make(SomeNamespace\MyClass::class);
+use Amp\Injector\Application;
+use Amp\Injector\Definitions;
+use Amp\Injector\Injector;
+use function Amp\Injector\{any, arguments, names, object, singleton, value};
 
-var_dump($obj2 instanceof SomeNamespace\MyClass); // true
-```
-
-###### Concrete Type-hinted Dependencies
-
-If a class only asks for concrete dependencies you can use the Injector to inject them without
-specifying any injection definitions. For example, in the following scenario you can use the
-Injector to automatically provision `MyClass` with the required `SomeDependency` and `AnotherDependency`
-class instances:
-
-```php
-<?php
-class SomeDependency {}
-
-class AnotherDependency {}
-
-class MyClass {
-    public $dep1;
-    public $dep2;
-    public function __construct(SomeDependency $dep1, AnotherDependency $dep2) {
-        $this->dep1 = $dep1;
-        $this->dep2 = $dep2;
-    }
+class MyService
+{
+    public function __construct(public array $config) {}
 }
 
-$injector = new Amp\Injector\Injector;
-$myObj = $injector->make(MyClass::class);
+$definitions = (new Definitions())
+    ->with(
+        singleton(object(MyService::class, arguments(names()
+            ->with('config', value(['key' => 'val']))
+        ))),
+        'my_service',
+    );
 
-var_dump($myObj->dep1 instanceof SomeDependency); // true
-var_dump($myObj->dep2 instanceof AnotherDependency); // true
+$application = new Application(new Injector(any()), $definitions, 'my-app');
+$application->start();
+
+/** @var MyService $svc */
+$svc = $application->getContainer()->get('my_service');
+
+$application->stop();
 ```
 
-###### Recursive Dependency Instantiation
+## Build flow
 
-One of the Injector's key attributes is that it recursively traverses class dependency trees to
-instantiate objects. This is just a fancy way of saying, "if you instantiate object A which asks for
-object B, the Injector will instantiate any of object B's dependencies so that B can be instantiated
-and provided to A". This is perhaps best understood with a simple example. Consider the following
-classes in which a `Car` asks for `Engine` and the `Engine` class has concrete dependencies of its
-own:
+1. Create a `Definitions` collection containing service / object / value / factory / composition definitions.
+2. Create an `Injector` with a root `Weaver` (typically `any(...)` chaining several weavers).
+3. Construct `Application(injector, definitions, name, ?aliasResolver)`.
+4. The `Application` calls `definition->build($injector)` for every definition and registers providers in the `Container`.
+5. `application->start()` walks the providers and starts every `Lifecycle` instance in dependency order.
+6. `$container->get($id)` retrieves services.
+7. `application->stop()` stops in reverse order.
+
+## Definition helpers
+
+### `singleton(Definition, mustStart = false)`
+
+Wraps any definition to cache the instance — subsequent `get()` calls return the same object. `mustStart=true` requires the service to be started before first `get()`.
 
 ```php
-<?php
-class Car {
-    private $engine;
-    public function __construct(Engine $engine) {
-        $this->engine = $engine;
-    }
-}
-
-class Engine {
-    private $sparkPlug;
-    private $piston;
-    public function __construct(SparkPlug $sparkPlug, Piston $piston) {
-        $this->sparkPlug = $sparkPlug;
-        $this->piston = $piston;
-    }
-}
-
-$injector = new Amp\Injector\Injector;
-$car = $injector->make(Car::class);
-var_dump($car instanceof Car); // true
+singleton(object(MyService::class));
+singleton(object(HttpServer::class), mustStart: true);
 ```
 
-### Injection Definitions
+### `object(string $class, ?Arguments $arguments = null)`
 
-You may have noticed that the previous examples all demonstrated instantiation of classes with
-explicit, type-hinted, concrete constructor parameters. Obviously, many of your classes won't fit
-this mold. Some classes will type-hint interfaces and abstract classes. Some will specify scalar
-parameters which offer no possibility of type-hinting in PHP. Still other parameters will be arrays,
-etc. In such cases we need to assist the Injector by telling it exactly what we want to inject.
-
-###### Defining Class Names for Constructor Parameters
-
-Let's look at how to provision a class with non-concrete type-hints in its constructor signature.
-Consider the following code in which a `Car` needs an `Engine` and `Engine` is an interface:
+Prototype factory — creates a new instance via constructor reflection every call. Wrap in `singleton()` for sharing.
 
 ```php
-<?php
-interface Engine {}
-
-class V8 implements Engine {}
-
-class Car {
-    private $engine;
-    public function __construct(Engine $engine) {
-        $this->engine = $engine;
-    }
-}
+object(Foobar::class)
+object(Foobar::class, arguments(names()
+    ->with('a', factory(fn() => new \stdClass()))
+    ->with('b', value(42))
+))
 ```
 
-To instantiate a `Car` in this case, we simply need to define an injection definition for the class
-ahead of time:
+### `value(mixed $value)`
+
+Wraps a literal — no construction logic.
 
 ```php
-<?php
-$injector = new Amp\Injector\Injector;
-$injector->define(Car::class, ['engine' => 'V8']);
-$car = $injector->make(Car::class);
-
-var_dump($car instanceof Car); // true
+value(['key' => 'val'])
+value(new \Monolog\Processor\PsrLogMessageProcessor())
 ```
 
-The most important points to notice here are:
+### `factory(\Closure $factory, ?Arguments $arguments = null)`
 
-1. A custom definition is an `array` whose keys match constructor parameter names
-2. The values in the definition array represent the class names to inject for the specified
-   parameter key
-
-Because the `Car` constructor parameter we needed to define was named `$engine`, our definition
-specified an `engine` key whose value was the name of the class (`V8`) that we want to inject.
-
-Custom injection definitions are only necessary on a per-parameter basis. For example, in the
-following class we only need to define the injectable class for `$arg2` because `$arg1` specifies a
-concrete class type-hint:
+Prototype factory from a closure. The closure can accept a `ProviderContext` to inspect the injection site:
 
 ```php
-<?php
-class MyClass {
-    private $arg1;
-    private $arg2;
-    public function __construct(SomeConcreteClass $arg1, SomeInterface $arg2) {
-        $this->arg1 = $arg1;
-        $this->arg2 = $arg2;
-    }
-}
-
-$injector = new Amp\Injector\Injector;
-$injector->define(MyClass::class, ['arg2' => 'SomeImplementationClass']);
-
-$myObj = $injector->make(MyClass::class);
+factory(function (ProviderContext $context): PsrLogger {
+    $param = $context->getParameter(1);
+    $name  = $param?->getDeclaringClass() ?? 'unknown';
+    return $logger->withName($name);
+})
 ```
 
-> **NOTE:** Injecting instances where an abstract class is type-hinted works in exactly the same way
-as the above examples for interface type-hints.
+### `injectableFactory(string $class, ?\Closure $factory = null, ?Arguments $arguments = null)`
 
-###### Using Existing Instances in Injection Definitions
-
-Injection definitions may also specify a pre-existing instance of the requisite class instead of the
-string class name:
+Returns a **callable** from the container, not an instance. Some parameters are pre-injected; remaining ones are passed at call time:
 
 ```php
-<?php
-interface SomeInterface {}
-
-class SomeImplementation implements SomeInterface {}
-
-class MyClass {
-    private $dependency;
-    public function __construct(SomeInterface $dependency) {
-        $this->dependency = $dependency;
-    }
-}
-
-$injector = new Amp\Injector\Injector;
-$dependencyInstance = new SomeImplementation;
-$injector->define(MyClass::class, [':dependency' => $dependencyInstance]);
-
-$myObj = $injector->make(MyClass::class);
-
-var_dump($myObj instanceof MyClass); // true
+injectableFactory(BarImpl::class)
+// fn(...$runtimeArgs): BarImpl => new BarImpl($injectedBaz, $injectedQux, ...$runtimeArgs)
 ```
 
-> **NOTE:** Since this `define()` call is passing raw values (as evidenced by the colon `:` usage),
-you can achieve the same result by omitting the array key(s) and relying on parameter order rather
-than name. Like so: `$injector->define('MyClass', [$dependencyInstance]);`
+### `compositionFactory(\Closure $factory, ?Definitions $itemDefinitions = null, ?Arguments $arguments = null)`
 
-###### Specifying Injection Definitions On the Fly
-
-You may also specify injection definitions at call-time with `Amp\Injector\Injector::make`. Consider:
+Creates a composition — a collection of items built from sub-definitions. The factory receives all items as named arguments.
 
 ```php
-<?php
-interface SomeInterface {}
-
-class SomeImplementationClass implements SomeInterface {}
-
-class MyClass {
-    private $dependency;
-    public function __construct(SomeInterface $dependency) {
-        $this->dependency = $dependency;
-    }
-}
-
-$injector = new Amp\Injector\Injector;
-$myObj = $injector->make('MyClass', ['dependency' => 'SomeImplementationClass']);
-
-var_dump($myObj instanceof MyClass); // true
+compositionFactory(CompositionOrdered::selfFactory(), $itemDefinitions)
+compositionFactory(MyCompositionImpl::selfFactory())
 ```
 
-The above code shows how even though we haven't called  the Injector's `define` method, the
-call-time specification allows us to instantiate `MyClass`.
+### `compositionItem(Definition $definition, array $before = [], array $after = [], array $depends = [])`
 
-> **NOTE:** on-the-fly instantiation definitions will override a pre-defined definition for the
-specified class, but only in the context of that particular call to `Amp\Injector\Injector::make`.
-
-### Type-Hint Aliasing
-
-Programming to interfaces is one of the most useful concepts in object-oriented design (OOD), and
-well-designed code should type-hint interfaces whenever possible. But does this mean we have to
-assign injection definitions for every class in our application to reap the benefits of abstracted
-dependencies? Thankfully the answer to this question is, "NO."  The Injector accommodates this goal
-by accepting "aliases". Consider:
+Wraps a definition as a `CompositionItem` for use inside `CompositionOrdered`:
 
 ```php
-<?php
-interface Engine {}
-class V8 implements Engine {}
-class Car {
-    private $engine;
-    public function __construct(Engine $engine) {
-        $this->engine = $engine;
-    }
-}
+$itemDefs = definitions()
+    ->with(object(CompositionItem::class, arguments()->with(names()
+        ->with('after', value(['bar']))
+        ->with('value', object(BazImpl::class))
+    )), 'baz')
+    ->with(object(CompositionItem::class, arguments()->with(names()
+        ->with('before', value(['bar']))
+        ->with('value', object(FooImpl::class))
+    )), 'foo')
+    ->with(object(CompositionItem::class, arguments()->with(names()
+        ->with('value', object(BarImpl::class))
+    )), 'bar');
 
-$injector = new Amp\Injector\Injector;
-
-// Tell the Injector class to inject an instance of V8 any time
-// it encounters an Engine type-hint
-$injector->alias('Engine', 'V8');
-
-$car = $injector->make('Car');
-var_dump($car instanceof Car); // bool(true)
+// Final order: foo → bar → baz
 ```
 
-In this example we've demonstrated how to specify an alias class for any occurrence of a particular
-interface or abstract class type-hint. Once an implementation is assigned, the Injector will use it
-to provision any parameter with a matching type-hint.
+## Weavers
 
-> **IMPORTANT:** If an injection definition is defined for a parameter covered by an implementation
-assignment, the definition takes precedence over the implementation.
+Weavers resolve constructor / function parameters to definitions. They're chained inside `Arguments` — first match wins.
 
-### Non-Class Parameters
+### `names(array $definitions = [])`
 
-All of the previous examples have demonstrated how the Injector class instantiates parameters based
-on type-hints, class name definitions and existing instances. But what happens if we want to inject
-a scalar or other non-object variable into a class? First, let's establish the following behavioral
-rule:
-
-> **IMPORTANT:** The Injector assumes all named-parameter definitions are class names by default.
-
-If you want the Injector to treat a named-parameter definition as a "raw" value and not a class name,
-you must prefix the parameter name in your definition with a colon character `:`. For example,
-consider the following code in which we tell the Injector to share a `PDO` database connection
-instance and define its scalar constructor parameters:
+Resolves by **parameter name** — the most common weaver:
 
 ```php
-<?php
-$injector = new Amp\Injector\Injector;
-$injector->share('PDO');
-$injector->define('PDO', [
-    ':dsn' => 'mysql:dbname=testdb;host=127.0.0.1',
-    ':username' => 'dbuser',
-    ':passwd' => 'dbpass'
-]);
-
-$db = $injector->make('PDO');
+arguments(names()
+    ->with('config', value(['key' => 'val']))
+    ->with('logger', singleton(object(Logger::class)))
+)
 ```
 
-The colon character preceding the parameter names tells the Injector that the associated values ARE
-NOT class names. If the colons had been omitted above, the injector would attempt to instantiate classes of
-the names specified in the string and an exception would result. Also, note that we could just as
-easily specified arrays or integers or any other data type in the above definitions. As long as the
-parameter name is prefixed with a `:`, the injector will inject the value directly without attempting to
-instantiate it.
+### `types(array $definitions = [])`
 
-> **NOTE:** As mentioned previously, since this `define()` call is passing raw values, you may opt to
-assign the values by parameter order rather than name. Since PDO's first three parameters are `$dsn`,
-`$username`, and `$password`, in that order, you could accomplish the same result by leaving out the
-array keys, like so:
-`$injector->define('PDO', ['mysql:dbname=testdb;host=127.0.0.1', 'dbuser', 'dbpass']);`
-
-### Global Parameter Definitions
-
-Sometimes applications may reuse the same value everywhere. However, it can be a hassle to manually
-specify definitions for this sort of thing everywhere it might be used in the app. The injector mitigates
-this problem by exposing the `Injector::defineParam()` method. Consider the following example ...
+Resolves by **parameter type** — explicit class → definition mapping. Also indexes parent classes / interfaces.
 
 ```php
-<?php
-$myUniversalValue = 42;
-
-class MyClass {
-    public $myValue;
-    public function __construct($myValue) {
-        $this->myValue = $myValue;
-    }
-}
-
-$injector = new Amp\Injector\Injector;
-$injector->defineParam('myValue', $myUniversalValue);
-$obj = $injector->make('MyClass');
-var_dump($obj->myValue === 42); // bool(true)
+types()->with(ProviderContext::class, new ProviderDefinition(new ContextProvider()))
 ```
 
-Because we specified a global definition for `myValue`, all parameters that are not in some other
-way defined (as below) that match the specified parameter name are auto-filled with the global value.
-If a parameter matches any of the following criteria the global value is not used:
+### `runtimeTypes(Definitions $defs, AliasResolver $aliasResolver)`
 
-- A typehint
-- A predefined injection definition
-- A custom call time definition
+Resolves via **PHP 8 attributes** on parameters. Supported attributes:
 
-
-## Advanced Usage
-
-### Instance Sharing
-
-One of the more ubiquitous plagues in modern OOP is the Singleton anti-pattern. Coders looking to
-limit classes to a single instance often fall into the trap of using `static` Singleton
-implementations for things like configuration classes and database connections. While it's often
-necessary to prevent multiple instances of a class, the Singleton method spells death to testability
-and should generally be avoided. `Amp\Injector\Injector` makes sharing class instances across contexts a
-triviality while allowing maximum testability and API transparency.
-
-Let's consider how a typical problem facing object-oriented web applications is easily solved by
-wiring together your application using the injector. Here, we want to inject a single database connection
-instance across multiple layers of an application. We have a controller class that asks for a
-DataMapper that requires a `PDO` database connection instance:
+| Attribute | Resolves to |
+|-----------|-------------|
+| `#[ServiceParameter]` | shared singleton instance of the parameter's type |
+| `#[SharedParameter]` | shared instance scoped to the current definition |
+| `#[PrivateParameter]` | new instance per injection site |
+| `#[FactoryParameter(Class::class)]` | injectable factory (callable) returning a `Class` instance |
 
 ```php
-<?php
-class DataMapper {
-    private $pdo;
-    public function __construct(PDO $pdo) {
-        $this->pdo = $pdo;
-    }
-}
-
-class MyController {
-    private $mapper;
-    public function __construct(DataMapper $mapper) {
-        $this->mapper = $mapper;
-    }
-}
-
-$db = new PDO('mysql:host=localhost;dbname=mydb', 'user', 'pass');
-
-$injector = new Amp\Injector\Injector;
-$injector->share($db);
-
-$myController = $injector->make('MyController');
-```
-
-In the above code, the `DataMapper` instance will be provisioned with the same `PDO` database
-connection instance we originally shared. This example is contrived and overly simple, but the
-implication should be clear:
-
-> By sharing an instance of a class, `Amp\Injector\Injector` will always use that instance when
-> provisioning classes that type-hint the shared class.
-
-###### A Simpler Example
-
-Let's look at a simple proof of concept:
-
-```php
-<?php
-class Person {
-    public $name = 'John Snow';
-}
-
-$injector = new Amp\Injector\Injector;
-$injector->share('Person');
-
-$person = $injector->make('Person');
-var_dump($person->name); // John Snow
-
-$person->name = 'Arya Stark';
-
-$anotherPerson = $injector->make('Person');
-var_dump($anotherPerson->name); // Arya Stark
-var_dump($person === $anotherPerson); // bool(true) because it's the same instance!
-```
-
-Defining an object as shared will store the provisioned instance in the Injector's shared cache and
-all future requests to the provider for an injected instance of that class will return the
-originally created object. Note that in the above code, we shared the class name (`Person`)
-instead of an actual instance. Sharing works with either a class name or an instance of a class.
-The difference is that when you specify a class name, the Injector
-will cache the shared instance the first time it is asked to create it.
-
-> **NOTE:** Once the Injector caches a shared instance, call-time definitions passed to
-`Amp\Injector\Injector::make` will have no effect. Once shared, an instance will always be returned for
-instantiations of its type until the object is un-shared or refreshed:
-
-### Instantiation Delegates
-
-Often factory classes/methods are used to prepare an object for use after instantiation. The injector
-allows you to integrate factories and builders directly into the injection process by specifying
-callable instantiation delegates on a per-class basis. Let's look at a very basic example to
-demonstrate the concept of injection delegates:
-
-```php
-<?php
-class MyComplexClass {
-    public $verification = false;
-    public function doSomethingAfterInstantiation() {
-        $this->verification = true;
-    }
-}
-
-$complexClassFactory = function() {
-    $obj = new MyComplexClass;
-    $obj->doSomethingAfterInstantiation();
-
-    return $obj;
-};
-
-$injector = new Amp\Injector\Injector;
-$injector->delegate('MyComplexClass', $complexClassFactory);
-
-$obj = $injector->make('MyComplexClass');
-var_dump($obj->verification); // bool(true)
-```
-
-In the above code we delegate instantiation of the `MyComplexClass` class to a closure,
-`$complexClassFactory`. Once this delegation is made, the Injector will return the results of the
-specified closure when asked to instantiate `MyComplexClass`.
-
-###### Available Delegate Types
-
-Any valid PHP callable may be registered as a class instantiation delegate using
-`Amp\Injector\Injector::delegate`. Additionally you may specify the name of a delegate class that
-specifies an `__invoke` method and it will be automatically provisioned and have its `__invoke`
-method called at delegation time. Instance methods from uninstantiated classes may also be specified
-using the `['NonStaticClassName', 'factoryMethod']` construction. For example:
-
-```php
-<?php
-class SomeClassWithDelegatedInstantiation {
-    public $value = 0;
-}
-class SomeFactoryDependency {}
-class MyFactory {
-    private $dependency;
-    function __construct(SomeFactoryDependency $dep) {
-        $this->dependency = $dep;
-    }
-    function __invoke() {
-        $obj = new SomeClassWithDelegatedInstantiation;
-        $obj->value = 1;
-        return $obj;
-    }
-    function factoryMethod() {
-        $obj = new SomeClassWithDelegatedInstantiation;
-        $obj->value = 2;
-        return $obj;
-    }
-}
-
-// Works because MyFactory specifies a magic __invoke method
-$injector->delegate('SomeClassWithDelegatedInstantiation', 'MyFactory');
-$obj = $injector->make('SomeClassWithDelegatedInstantiation');
-var_dump($obj->value); // int(1)
-
-// This also works
-$injector->delegate('SomeClassWithDelegatedInstantiation', 'MyFactory::factoryMethod');
-$obj = $injector->make('SomeClassWithDelegatedInstantiation');
-$obj = $injector->make('SomeClassWithDelegatedInstantiation');
-var_dump($obj->value); // int(2)
-```
-
-### Prepares and Setter Injection
-
-Constructor injection is almost always preferable to setter injection. However, some APIs require
-additional post-instantiation mutations. The injector accommodates these use cases with its
-`Injector::prepare()` method. Users may register any class or interface name for post-instantiation
-modification. Consider:
-
-```php
-<?php
-
-class MyClass {
-    public $myProperty = 0;
-}
-
-$injector->prepare('MyClass', function($myObj, $injector) {
-    $myObj->myProperty = 42;
-});
-
-$myObj = $injector->make('MyClass');
-var_dump($myObj->myProperty); // int(42)
-```
-
-While the above example is contrived, the usefulness should be clear.
-
-
-### Injecting for Execution
-
-In addition to provisioning class instances using constructors, the injector can also recursively instantiate
-the parameters of any [valid PHP callable](http://php.net/manual/en/language.types.callable.php).
-The following examples all work:
-
-```php
-<?php
-$injector = new Amp\Injector\Injector;
-$injector->execute(function(){});
-$injector->execute([$objectInstance, 'methodName']);
-$injector->execute('globalFunctionName');
-$injector->execute('MyStaticClass::myStaticMethod');
-$injector->execute(['MyStaticClass', 'myStaticMethod']);
-$injector->execute(['MyChildStaticClass', 'parent::myStaticMethod']);
-$injector->execute('ClassThatHasMagicInvoke');
-$injector->execute($instanceOfClassThatHasMagicInvoke);
-$injector->execute('MyClass::myInstanceMethod');
-```
-
-Additionally, you can pass in the name of a class for a non-static method and the injector will
-automatically provision an instance of the class (subject to any definitions or shared instances
-already stored by the injector) before provisioning and invoking the specified method:
-
-```php
-<?php
-class Dependency {}
-class AnotherDependency {}
-class Example {
-    function __construct(Dependency $dep){}
-    function myMethod(AnotherDependency $arg1, $arg2) {
-        return $arg2;
-    }
-}
-
-$injector = new Amp\Injector\Injector;
-
-// outputs: int(42)
-var_dump($injector->execute('Example::myMethod', $args = [':arg2' => 42]));
-```
-
-
-### Dependency Resolution
-
-`Amp\Injector\Injector` resolves dependencies in the following order:
-
-1. If a shared instance exists for the class in question, the shared instance will always be returned
-2. If a delegate callable is assigned for a class, its return result will always be used
-3. If a call-time definition is passed to `Amp\Injector\Injector::make`, that definition will be used
-4. If a pre-defined definition exists, it will be used
-5. If a dependency is type-hinted, the Injector will recursively instantiate it subject to any implementations or definitions
-6. If no type-hint exists and the parameter has a default value, the default value is injected
-7. If a global parameter value is defined that value is used
-8. Throw an exception because you did something stupid
-
-## Example Use Cases
-
-Dependency Injection Containers (DIC) are generally misunderstood in the PHP community. One of the
-primary culprits is the misuse of such containers in the mainstream application frameworks. Often,
-these frameworks warp their DICs into Service Locator anti-patterns. This is a shame because a
-good DIC should be the exact opposite of a Service Locator.
-
-###### The injector is NOT a service locator!
-
-There's a galaxy of differences between using a DIC to wire together your application versus
-passing the DIC as a dependency to your objects (Service Locator). Service Locator (SL) is an
-anti-pattern -- it hides class dependencies, makes code difficult to maintain and makes a liar of
-your API.
-
-When you pass a SL into your constructors it makes it difficult to determine what the class dependencies
-really are. A `House` object depends on `Door` and `Window` objects. A `House` object DOES NOT depend
-on an instance of `ServiceLocator` regardless of whether the `ServiceLocator` can provide `Door` and
-`Window` objects.
-
-In real life you wouldn't build a house by transporting the entire hardware store (hopefully) to
-the construction site so you can access any parts you need. Instead, the foreman (`__construct()`)
-asks for the specific parts that will be needed (`Door` and `Window`) and goes about procuring them.
-Your objects should function in the same way; they should ask only for the specific dependencies
-required to do their jobs. Giving the `House` access to the entire hardware store is at best poor
-OOP style and at worst a maintainability nightmare. The takeaway here is this:
-
-> **IMPORTANT:** do not use the injector like a Service Locator!
-
-
-### Avoiding Evil Singletons
-
-A common difficulty in web applications is limiting the number of database connection instances.
-It's wasteful and slow to open up new connections each time we need to talk to a database.
-Unfortunately, using singletons to limit these instances makes code brittle and hard to test. Let's
-see how we can use the injector to inject the same `PDO` instance across the entire scope of our application.
-
-Say we have a service class that requires two separate data mappers to persist information to a database:
-
-```php
-<?php
-
-class HouseMapper {
-    private $pdo;
-    public function __construct(PDO $pdo) {
-        $this->pdo = $pdo;
-    }
-    public function find($houseId) {
-        $query = 'SELECT * FROM houses WHERE houseId = :houseId';
-
-        $stmt = $this->pdo->prepare($query);
-        $stmt->bindValue(':houseId', $houseId);
-
-        $stmt->setFetchMode(PDO::FETCH_CLASS, 'Model\\Entities\\House');
-        $stmt->execute();
-        $house = $stmt->fetch(PDO::FETCH_CLASS);
-
-        if (false === $house) {
-            throw new RecordNotFoundException(
-                'No houses exist for the specified ID'
-            );
-        }
-
-        return $house;
-    }
-
-    // more data mapper methods here ...
-}
-
-class PersonMapper {
-    private $pdo;
-    public function __construct(PDO $pdo) {
-        $this->pdo = $pdo;
-    }
-    // data mapper methods here
-}
-
-class SomeService {
-    private $houseMapper;
-    private $personMapper;
-    public function __construct(HouseMapper $hm, PersonMapper $pm) {
-        $this->houseMapper = $hm;
-        $this->personMapper = $pm;
-    }
-    public function doSomething() {
-        // do something with the mappers
-    }
+class FooImpl
+{
+    public function __construct(
+        #[PrivateParameter] protected Bar         $bar,
+        #[SharedParameter]  protected Baz         $baz,
+        #[ServiceParameter] protected Qux         $qux,
+        #[FactoryParameter(Bar::class)] protected \Closure $barFactory,
+    ) {}
+
+    public function makeBar(): Bar { return ($this->barFactory)(); }
 }
 ```
 
-In our wiring/bootstrap code, we simply instantiate the `PDO` instance once and share it in the
-context of the `Injector`:
+### `automaticTypes(Definitions $defs, AliasResolver $aliasResolver)`
+
+Auto-wires by type from all registered definitions. Returns a definition only if **exactly one** matches the type — ambiguous matches return `null`.
 
 ```php
-<?php
-$pdo = new PDO('sqlite:some_sqlite_file.db');
-$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$defs = definitions()
+    ->with(object(Foo::class))
+    ->with(object(Bar::class));
 
-$injector = new Amp\Injector\Injector;
-
-$injector->share($pdo);
-$mapper = $injector->make('SomeService');
+$injector = new Injector(automaticTypes($defs));
+// Bar's constructor parameter of type Foo is auto-resolved.
 ```
 
-In the above code, the DIC instantiates our service class. More importantly, the data mapper classes
-it generates to do so are injected *with the same database connection instance we originally shared*.
+### `any(Weaver ...$weavers)`
 
-Of course, we don't have to manually instantiate our `PDO` instance. We could just as easily seed
-the container with a definition for how to create the `PDO` object and let it handle things for us:
+Tries multiple weavers in order, returns the first match. Typical setup:
 
 ```php
-<?php
-$injector->define('PDO', [
-    ':dsn' => 'sqlite:some_sqlite_file.db'
-]);
-$injector->share('PDO');
-$service = $injector->make('SomeService');
+$injector = new Injector(any(
+    automaticTypes($defs, $aliasResolver),
+    runtimeTypes(new Definitions(), $aliasResolver),
+));
 ```
 
-In the above code, the injector will pass the string definition as the `$dsn` argument in the
-`PDO::__construct` method and generate the shared PDO instance automatically only if one of the
-classes it instantiates requires a `PDO` instance!
+## Alias resolution
 
-
-
-### App-Bootstrapping
-
-DICs should be used to wire together the disparate objects of your application into a cohesive
-functional unit (generally at the bootstrap or front-controller stage of the application). One such
-usage provides an elegant solution for one of the thorny problems in object-oriented (OO) web
-applications: how to instantiate classes in a routed environment where the dependencies are not
-known ahead of time.
-
-Consider the following front controller code whose job is to:
-
-1. Load a list of application routes and pass them to the router
-2. Generate a model of the client's HTTP request
-3. Route the request instance given the application's route list
-4. Instantiate the routed controller and invoke a method appropriate to the HTTP request
+Maps interfaces to implementations via `AliasResolverImpl`. Aliases are **one-way** — requesting `Foo` yields `FooImpl`, but requesting `FooImpl` directly resolves through `FooImpl`'s own definition.
 
 ```php
-<?php
+$aliasResolver = (new \Amp\Injector\AliasResolverImpl())
+    ->with(Foo::class, FooImpl::class)
+    ->with(Bar::class, BarImpl::class);
 
-define('CONTROLLER_ROUTES', '/hard/path/to/routes.xml');
+$injector = (new Injector(any(...)))
+    ->withAlias($aliasResolver->alias(...));
 
-$routeLoader = new RouteLoader();
-$routes = $routeLoader->loadFromXml(CONTROLLER_ROUTES);
-$router = new Router($routes);
-
-$requestDetector = new RequestDetector();
-$request = $requestDetector->detectFromSuperglobal($_SERVER);
-
-$requestUri = $request->getUri();
-$requestMethod = strtolower($request->getMethod());
-
-$injector = new Amp\Injector\Injector;
-$injector->share($request);
-
-try {
-    if (!$controllerClass = $router->route($requestUri, $requestMethod)) {
-        throw new NoRouteMatchException();
-    }
-
-    $controller = $injector->make($controllerClass);
-    $callableController = array($controller, $requestMethod);
-
-    if (!is_callable($callableController)) {
-        throw new MethodNotAllowedException();
-    } else {
-        $callableController();
-    }
-
-} catch (NoRouteMatchException $e) {
-    // send 404 response
-} catch (MethodNotAllowedException $e) {
-    // send 405 response
-} catch (Exception $e) {
-    // send 500 response
-}
+$application = new Application($injector, $definitions, 'app', $aliasResolver);
+$application->getContainer()->get(Foo::class);   // → FooImpl
 ```
 
-And elsewhere we have various controller classes, each of which ask for their own individual
-dependencies:
+## Compositions (ordered collections)
+
+`CompositionOrdered` items get topologically sorted via `before` / `after` / `depends`:
 
 ```php
-<?php
+$items = definitions()
+    ->with(object(CompositionItem::class, arguments()->with(names()
+        ->with('after', value(['bar']))
+        ->with('value', object(BazImpl::class))
+    )), 'baz')
+    ->with(object(CompositionItem::class, arguments()->with(names()
+        ->with('value', object(BarImpl::class))
+    )), 'bar');
 
-class WidgetController {
-    private $request;
-    private $mapper;
-    public function __construct(Request $request, WidgetDataMapper $mapper) {
-        $this->request = $request;
-        $this->mapper = $mapper;
-    }
-    public function get() {
-        // do something for HTTP GET requests
-    }
-    public function post() {
-        // do something for HTTP POST requests
-    }
-}
+$ordered = compositionFactory(CompositionOrdered::selfFactory(), $items);
 ```
 
-In the above example the injector DIC allows us to write fully testable, fully OO controllers that ask
-for their dependencies. Because the DIC recursively instantiates the dependencies of objects it
-creates we have no need to pass around a Service Locator. Additionally, this example shows how we can
-eliminate evil Singletons using the sharing capabilities of the injector DIC. In the front controller
-code, we share the request object so that any classes instantiated by the `Amp\Injector\Injector` that ask
-for a `Request` will receive the same instance. This feature not only helps eliminate Singletons,
-but also the need for hard-to-test `static` properties.
+`CompositionImpl` is the simple unordered variant. Use `selfFactory()` as the factory closure for both.
+
+## Lifecycle
+
+Services implementing `Lifecycle` are managed by the application:
+
+- `start()` — called after every definition is built; walks the dependency graph; starts in dependency order
+- `stop()` — called on shutdown; reverse order
+- `singleton($definition, mustStart: true)` — service must be started before first `get()`
+- `SingletonProvider->lazy()` — defer initialization to first `get()` instead of `start()`
+
+## Lazy proxies
+
+Pluggable via custom `Definition`s using `ocramius/proxy-manager`. See `examples/proxy.php`:
+
+```php
+$definitions = (new Definitions())
+    ->with(proxy(Car::class, object(Car::class)),  'car')
+    ->with(proxy(V8::class,  object(V8::class)),   'engine');
+
+$car = $container->get('car');   // Car constructor NOT called yet
+$car->turnRight();                // NOW Car is constructed
+```
+
+The built-in `ProxyDefinition` currently throws `not supported yet` — provide your own `Definition` subclass.
+
+## Examples
+
+The `examples/` directory contains runnable scripts for every feature:
+
+| File | Demonstrates |
+|------|--------------|
+| `singleton.php` | Basic singleton + value definitions |
+| `runtime.php` | Attribute-driven runtime types + compositions |
+| `delegation.php` | Factories and `injectableFactory` |
+| `logger.php` | `ProviderContext` for site-aware factories |
+| `proxy.php` | Lazy-loading proxy definitions |
+| `benchmark.php` | Performance harness |
+
+## Gotchas
+
+- **Aliases are one-way.** `Interface ⇒ Impl` lets you request the interface. Requesting `Impl` directly uses `Impl`'s own definition, not the alias.
+- **Class names are normalised to lowercase** internally — don't rely on case-sensitive keys.
+- **Ambiguous auto-wiring** — if two definitions share a type, `automaticTypes` returns `null`. Disambiguate with `names()` or `types()`.
+- **Circular dependencies are not detected** — they cause infinite recursion. Refactor or use `lazy` singletons.
+- **Containers are immutable** — every `with()` returns a clone; the `Application` holds the final reference.
+- **`mustStart` singletons** — `get()` before `application->start()` throws `LifecycleException`.
+- **Variadic parameters** — only supported via `injectableFactory()`. Plain `factory()` doesn't pass variadics through.
+- **Built-in `ProxyDefinition` is not implemented** — see `examples/proxy.php` for a custom approach.
+
+## Differences from upstream `amphp/injector`
+
+| Upstream | This fork |
+|----------|-----------|
+| `Injector::make()`, `define()`, `share()`, `delegate()`, `prepare()` | gone — replaced by `Application` + `Definitions` + weavers |
+| `define()` arrays | `arguments(names()->with(...))` |
+| `share()` | `singleton(...)` |
+| `alias()` (Injector method) | `AliasResolverImpl` (separate object) |
+| Per-injector instance API | Immutable `Application` / `Container` / `Definitions` |
+| No compositions | `Composition`, `CompositionOrdered`, `CompositionItem` first-class |
+| No attribute-driven wiring | `#[ServiceParameter]`, `#[SharedParameter]`, `#[PrivateParameter]`, `#[FactoryParameter]` |
+| No formal lifecycle | `Lifecycle::start()` / `stop()` walked in dependency order |
+
+## See also
+
+- [`flyokai/application`](../application/README.md) — uses this DI as the runtime container; see also `vendor/flyokai/flyokai/docs/dependency-injection.md` for diconfig structure
+- [`flyokai/composition`](../composition/README.md) — module-level topological sort (different layer than `CompositionOrdered`)
+- [`flyokai/generic`](../generic/README.md) — `TunerContainer` / `ExecutionContainer` use compositions internally
+- Original: <https://github.com/amphp/injector>
+
+## License
+
+MIT

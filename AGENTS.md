@@ -1,4 +1,6 @@
-# wtsergo/amphp-injector
+# flyokai/amphp-injector
+
+> User docs → [`README.md`](README.md) · Agent quick-ref → [`CLAUDE.md`](CLAUDE.md) · Agent deep dive → [`AGENTS.md`](AGENTS.md)
 
 Dependency injection container for PHP 8.1+ with weaver-based parameter resolution, ordered compositions, and lifecycle management.
 
